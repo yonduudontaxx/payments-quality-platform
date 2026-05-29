@@ -81,7 +81,7 @@ test.describe('Full Payment Lifecycle', () => {
     // Authorize payment
     const authRes = await request.post('/payments/authorize', {
       data: { account_id: account.id, amount_cents: 50_000 },
-      headers: { 'Idempotency-Key': 'e2e-auth-1' },
+      headers: { 'Idempotency-Key': `e2e-auth-${Date.now()}` },
     });
     expect(authRes.status()).toBe(201);
     const authorization = await authRes.json();
