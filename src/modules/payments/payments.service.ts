@@ -1,6 +1,7 @@
 import type postgres from 'postgres';
 import sql from '../../db/client.js';
 import { AppError, NotFoundError } from '../../shared/errors.js';
+import { getSimulationConfig } from '../simulation/simulation.config.js';
 import type { Account, Transaction } from '../../shared/types.js';
 import { validateTransition } from './state-machine.js';
 
@@ -24,6 +25,11 @@ export async function authorizePayment(input: AuthorizePaymentInput): Promise<Tr
       const account = accountRows[0];
       if (!account) throw new NotFoundError('Account', input.account_id);
 
+      const { decline_rate } = getSimulationConfig();
+      if (decline_rate > 0 && Math.random() < decline_rate) {
+        throw new AppError('Payment declined by simulation', 402, 'SIMULATED_DECLINE');
+      }
+
       if (account.balance_cents < BigInt(input.amount_cents)) {
         throw new AppError('Insufficient funds', 402, 'INSUFFICIENT_FUNDS');
       }
@@ -42,7 +48,7 @@ export async function authorizePayment(input: AuthorizePaymentInput): Promise<Tr
     });
     return result;
   } catch (err) {
-    if (err instanceof AppError && err.code === 'INSUFFICIENT_FUNDS') {
+    if (err instanceof AppError && (err.code === 'INSUFFICIENT_FUNDS' || err.code === 'SIMULATED_DECLINE')) {
       // Persist audit record OUTSIDE the rolled-back transaction
       await sql`
         INSERT INTO transactions (account_id, type, amount_cents, status, idempotency_key, metadata)

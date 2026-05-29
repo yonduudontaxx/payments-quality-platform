@@ -6,6 +6,8 @@ import { AppError } from './shared/errors.js';
 import idempotencyPlugin from './modules/idempotency/idempotency.plugin.js';
 import { accountsRoutes } from './modules/accounts/accounts.routes.js';
 import { paymentsRoutes } from './modules/payments/payments.routes.js';
+import { simulationRoutes } from './modules/simulation/simulation.routes.js';
+import { getSimulationConfig } from './modules/simulation/simulation.config.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -16,6 +18,14 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(sensible);
   await app.register(cors, {
     origin: process.env.CORS_ORIGIN ?? false,
+  });
+
+  // Timeout simulation hook
+  app.addHook('onRequest', async (_request, _reply) => {
+    const { timeout_ms } = getSimulationConfig();
+    if (timeout_ms > 0) {
+      await new Promise(resolve => setTimeout(resolve, timeout_ms));
+    }
   });
 
   // Idempotency plugin (must be before routes)
@@ -52,6 +62,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   // Routes
   await app.register(accountsRoutes);
   await app.register(paymentsRoutes);
+  await app.register(simulationRoutes);
 
   return app;
 }
