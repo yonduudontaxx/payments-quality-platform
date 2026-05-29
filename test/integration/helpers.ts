@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import type { Response as LightMyResponse } from 'light-my-request';
 
 export async function request(
   app: FastifyInstance,
@@ -6,14 +7,14 @@ export async function request(
   url: string,
   options: { body?: unknown; headers?: Record<string, string> } = {},
 ): Promise<{ status: number; body: unknown }> {
-  const response = await app.inject({
+  const response = (await app.inject({
     method: method as 'GET' | 'POST' | 'DELETE',
     url,
-    payload: options.body,
+    payload: options.body as string | object | Buffer | NodeJS.ReadableStream | undefined,
     headers: options.headers,
-  });
+  })) as LightMyResponse;
   return {
     status: response.statusCode,
-    body: JSON.parse(response.body),
+    body: response.json<unknown>(),
   };
 }
