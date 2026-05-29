@@ -1,7 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { createAccount, getAccount } from './accounts.service.js';
 import { createAccountSchema, getAccountSchema } from './accounts.schema.js';
-import { AppError } from '../../shared/errors.js';
 
 export async function accountsRoutes(app: FastifyInstance): Promise<void> {
   app.post('/accounts', { schema: createAccountSchema }, async (request, reply) => {

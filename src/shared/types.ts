@@ -26,7 +26,7 @@ export interface WebhookEvent {
   delivery_url: string;
   status: 'pending' | 'delivered' | 'failed' | 'permanently_failed';
   attempts: number;
-  next_retry_at: Date;
+  next_retry_at: Date | null;
   created_at: Date;
 }
 
