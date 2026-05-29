@@ -16,17 +16,29 @@ export function startWebhookWorker(): NodeJS.Timeout {
   }, POLL_INTERVAL_MS);
 }
 
-async function processPendingWebhooks(): Promise<void> {
-  const events = await sql<WebhookEvent[]>`
-    SELECT * FROM webhook_events
-    WHERE status IN ('pending', 'failed')
-      AND next_retry_at <= now()
-    ORDER BY next_retry_at ASC
-    LIMIT 10
-  `;
+const WORKER_LOCK_KEY = 1_234_567_890; // arbitrary unique key for this worker
 
-  for (const event of events) {
-    await processEvent(event);
+async function processPendingWebhooks(): Promise<void> {
+  // Try to acquire advisory lock — skip this cycle if another process holds it
+  const [{ acquired }] = await sql<[{ acquired: boolean }]>`
+    SELECT pg_try_advisory_lock(${WORKER_LOCK_KEY}) AS acquired
+  `;
+  if (!acquired) return;
+
+  try {
+    const events = await sql<WebhookEvent[]>`
+      SELECT * FROM webhook_events
+      WHERE status IN ('pending', 'failed')
+        AND next_retry_at <= now()
+      ORDER BY next_retry_at ASC
+      LIMIT 10
+    `;
+
+    for (const event of events) {
+      await processEvent(event);
+    }
+  } finally {
+    await sql`SELECT pg_advisory_unlock(${WORKER_LOCK_KEY})`;
   }
 }
 
@@ -35,22 +47,31 @@ async function processEvent(event: WebhookEvent): Promise<void> {
     await deliverWebhookEvent(event);
     await sql`
       UPDATE webhook_events
-      SET status = 'delivered', attempts = ${event.attempts + 1}
+      SET status = 'delivered', attempts = attempts + 1
       WHERE id = ${event.id}
     `;
     logger.info({ eventId: event.id }, 'Webhook delivered');
   } catch (err) {
     const newAttempts = event.attempts + 1;
-    const nextDelay = RETRY_DELAYS_MS[newAttempts - 1];
     const isFinal = newAttempts >= RETRY_DELAYS_MS.length;
 
-    await sql`
-      UPDATE webhook_events
-      SET status = ${isFinal ? 'permanently_failed' : 'failed'},
-          attempts = ${newAttempts},
-          next_retry_at = now() + ${`${nextDelay ?? 32000} milliseconds`}::interval
-      WHERE id = ${event.id}
-    `;
+    if (isFinal) {
+      await sql`
+        UPDATE webhook_events
+        SET status = 'permanently_failed',
+            attempts = attempts + 1
+        WHERE id = ${event.id}
+      `;
+    } else {
+      const nextDelayMs = RETRY_DELAYS_MS[newAttempts - 1] ?? 32_000;
+      await sql`
+        UPDATE webhook_events
+        SET status = 'failed',
+            attempts = attempts + 1,
+            next_retry_at = now() + ${`${nextDelayMs} milliseconds`}::interval
+        WHERE id = ${event.id}
+      `;
+    }
     logger.warn({ eventId: event.id, attempts: newAttempts, isFinal }, 'Webhook delivery failed');
   }
 }

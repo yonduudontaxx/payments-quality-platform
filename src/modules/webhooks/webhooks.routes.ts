@@ -35,6 +35,7 @@ export async function webhooksRoutes(app: FastifyInstance): Promise<void> {
           status: { type: 'string', enum: ['pending', 'delivered', 'failed', 'permanently_failed'] },
           limit: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
         },
+        additionalProperties: false,
       },
     },
   }, async (request, reply) => {
