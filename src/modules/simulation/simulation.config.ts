@@ -13,7 +13,15 @@ export function getSimulationConfig(): SimulationConfig {
 }
 
 export function setSimulationConfig(update: Partial<SimulationConfig>): SimulationConfig {
-  config = { ...config, ...update };
+  config = {
+    ...config,
+    ...(update.timeout_ms !== undefined
+      ? { timeout_ms: Math.max(0, Math.min(30_000, update.timeout_ms)) }
+      : {}),
+    ...(update.decline_rate !== undefined
+      ? { decline_rate: Math.max(0, Math.min(1, update.decline_rate)) }
+      : {}),
+  };
   return getSimulationConfig();
 }
 

@@ -21,7 +21,10 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   // Timeout simulation hook
-  app.addHook('onRequest', async (_request, _reply) => {
+  app.addHook('onRequest', async (request, _reply) => {
+    // Don't apply timeout to simulation control endpoints
+    if (request.url.startsWith('/simulate')) return;
+
     const { timeout_ms } = getSimulationConfig();
     if (timeout_ms > 0) {
       await new Promise(resolve => setTimeout(resolve, timeout_ms));

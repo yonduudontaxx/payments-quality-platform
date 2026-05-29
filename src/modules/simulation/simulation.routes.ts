@@ -7,7 +7,7 @@ export async function simulationRoutes(app: FastifyInstance): Promise<void> {
       body: {
         type: 'object',
         properties: {
-          timeout_ms: { type: 'integer', minimum: 0 },
+          timeout_ms: { type: 'integer', minimum: 0, maximum: 30000 },
           decline_rate: { type: 'number', minimum: 0, maximum: 1 },
         },
         additionalProperties: false,
