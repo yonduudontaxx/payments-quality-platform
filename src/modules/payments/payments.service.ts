@@ -16,114 +16,82 @@ function toJson(value: Record<string, unknown>): postgres.JSONValue {
 }
 
 export async function authorizePayment(input: AuthorizePaymentInput): Promise<Transaction> {
-  let result: Transaction | undefined;
+  try {
+    const result = await sql.begin(async (tx) => {
+      const accountRows = await tx<Account[]>`
+        SELECT * FROM accounts WHERE id = ${input.account_id} FOR UPDATE
+      `;
+      const account = accountRows[0];
+      if (!account) throw new NotFoundError('Account', input.account_id);
 
-  await sql.begin(async (tx) => {
-    // Lock and fetch account
-    const accounts = await tx<Account[]>`
-      SELECT * FROM accounts WHERE id = ${input.account_id} FOR UPDATE
-    `;
+      if (account.balance_cents < BigInt(input.amount_cents)) {
+        throw new AppError('Insufficient funds', 402, 'INSUFFICIENT_FUNDS');
+      }
 
-    if (accounts.length === 0) {
-      throw new NotFoundError('Account', input.account_id);
-    }
-
-    const account = accounts[0];
-
-    // Check sufficient funds
-    if (account.balance_cents < BigInt(input.amount_cents)) {
-      // Insert failed transaction
-      await tx<Transaction[]>`
+      await tx`
+        UPDATE accounts SET balance_cents = balance_cents - ${input.amount_cents}
+        WHERE id = ${input.account_id}
+      `;
+      const txRows = await tx<Transaction[]>`
         INSERT INTO transactions (account_id, type, amount_cents, status, idempotency_key, metadata)
-        VALUES (
-          ${input.account_id},
-          'authorize',
-          ${input.amount_cents},
-          'failed',
-          ${input.idempotency_key ?? null},
-          ${sql.json(toJson(input.metadata ?? {}))}
-        )
+        VALUES (${input.account_id}, 'authorize', ${input.amount_cents}, 'authorized',
+                ${input.idempotency_key ?? null}, ${sql.json(toJson(input.metadata ?? {}))})
         RETURNING *
       `;
-      throw new AppError('Insufficient funds', 402, 'INSUFFICIENT_FUNDS');
+      return txRows[0];
+    });
+    return result;
+  } catch (err) {
+    if (err instanceof AppError && err.code === 'INSUFFICIENT_FUNDS') {
+      // Persist audit record OUTSIDE the rolled-back transaction
+      await sql`
+        INSERT INTO transactions (account_id, type, amount_cents, status, idempotency_key, metadata)
+        VALUES (${input.account_id}, 'authorize', ${input.amount_cents}, 'failed',
+                ${input.idempotency_key ?? null}, ${sql.json(toJson(input.metadata ?? {}))})
+      `;
     }
-
-    // Deduct from balance
-    await tx`
-      UPDATE accounts SET balance_cents = balance_cents - ${input.amount_cents} WHERE id = ${input.account_id}
-    `;
-
-    // Insert authorized transaction
-    const transactions = await tx<Transaction[]>`
-      INSERT INTO transactions (account_id, type, amount_cents, status, idempotency_key, metadata)
-      VALUES (
-        ${input.account_id},
-        'authorize',
-        ${input.amount_cents},
-        'authorized',
-        ${input.idempotency_key ?? null},
-        ${sql.json(toJson(input.metadata ?? {}))}
-      )
-      RETURNING *
-    `;
-
-    result = transactions[0];
-  });
-
-  return result!;
+    throw err;
+  }
 }
 
 export async function capturePayment(id: string): Promise<Transaction> {
-  const rows = await sql<Transaction[]>`SELECT * FROM transactions WHERE id = ${id}`;
-
-  if (rows.length === 0) {
-    throw new NotFoundError('Transaction', id);
-  }
-
-  const transaction = rows[0];
-  validateTransition(transaction.status, 'capture');
-
-  const updated = await sql<Transaction[]>`
-    UPDATE transactions
-    SET status = 'captured', updated_at = now()
-    WHERE id = ${id}
-    RETURNING *
-  `;
-
-  return updated[0];
-}
-
-export async function refundPayment(id: string): Promise<Transaction> {
-  const rows = await sql<Transaction[]>`SELECT * FROM transactions WHERE id = ${id}`;
-
-  if (rows.length === 0) {
-    throw new NotFoundError('Transaction', id);
-  }
-
-  const transaction = rows[0];
-  validateTransition(transaction.status, 'refund');
-
-  let result: Transaction | undefined;
-
-  await sql.begin(async (tx) => {
+  const result = await sql.begin(async (tx) => {
+    const rows = await tx<Transaction[]>`
+      SELECT * FROM transactions WHERE id = ${id} FOR UPDATE
+    `;
+    const transaction = rows[0];
+    if (!transaction) throw new NotFoundError('Transaction', id);
+    validateTransition(transaction.status, 'capture');
     const updated = await tx<Transaction[]>`
-      UPDATE transactions
-      SET status = 'refunded', updated_at = now()
+      UPDATE transactions SET status = 'captured', updated_at = now()
       WHERE id = ${id}
       RETURNING *
     `;
+    return updated[0];
+  });
+  return result;
+}
 
-    result = updated[0];
-
-    const amountCents = Number(transaction.amount_cents);
+export async function refundPayment(id: string): Promise<Transaction> {
+  const result = await sql.begin(async (tx) => {
+    const rows = await tx<Transaction[]>`
+      SELECT * FROM transactions WHERE id = ${id} FOR UPDATE
+    `;
+    const transaction = rows[0];
+    if (!transaction) throw new NotFoundError('Transaction', id);
+    validateTransition(transaction.status, 'refund');
+    const updated = await tx<Transaction[]>`
+      UPDATE transactions SET status = 'refunded', updated_at = now()
+      WHERE id = ${id}
+      RETURNING *
+    `;
     await tx`
-      UPDATE accounts
-      SET balance_cents = balance_cents + ${amountCents}
+      UPDATE accounts SET balance_cents = balance_cents + ${Number(transaction.amount_cents)}
       WHERE id = ${transaction.account_id}
     `;
+    return updated[0];
   });
-
-  return result!;
+  return result;
 }
 
 export async function getTransaction(id: string): Promise<Transaction> {
