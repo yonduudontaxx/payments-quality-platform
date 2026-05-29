@@ -42,13 +42,13 @@ A payment begins in the `PENDING` state. Authorization checks the account balanc
 |--------|------|-------------|
 | POST | `/accounts` | Create a new account with an initial balance |
 | GET | `/accounts/:id` | Retrieve account details and current balance |
-| POST | `/payments` | Initiate a new payment (transitions to PENDING) |
-| POST | `/payments/:id/authorize` | Authorize a pending payment |
-| POST | `/payments/:id/capture` | Capture an authorized payment |
-| POST | `/payments/:id/refund` | Refund a captured payment |
+| POST | `/payments/authorize` | Reserve funds → `authorized` |
+| POST | `/payments/:id/capture` | Settle an authorized payment → `captured` |
+| POST | `/payments/:id/refund` | Refund a captured payment → `refunded`, restores balance |
 | GET | `/payments/:id` | Retrieve payment details and current state |
 | POST | `/simulate/config` | Configure fault injection (timeout, decline rate) |
-| DELETE | `/simulate/config` | Reset simulation to default (no faults) |
+| GET | `/simulate/config` | Read current simulation config |
+| DELETE | `/simulate/config` | Reset simulation to defaults (no faults) |
 | POST | `/webhooks/config` | Set the webhook delivery URL |
 | GET | `/webhooks/events` | Inspect the webhook event queue |
 
@@ -150,6 +150,23 @@ Returns the list of queued/delivered webhook events, including delivery status a
 - **DB-backed idempotency cache** — requests bearing an `Idempotency-Key` header are deduplicated via a PostgreSQL-backed cache with a 24-hour TTL, preventing duplicate payments from retried requests.
 - **Exponential backoff retries** — webhook delivery retries follow the schedule `[2s, 4s, 8s, 16s, 32s]` before a delivery is marked permanently failed.
 - **Full test pyramid** — unit tests validate pure logic in isolation, integration tests cover DB interactions, and Playwright E2E tests drive the full HTTP API to verify end-to-end behavior.
+
+## CI
+
+GitHub Actions runs the full test suite on every push to `main` and every pull request.
+
+```
+lint / type-check → migrate → unit tests → integration tests → E2E tests
+```
+
+The workflow spins up a `postgres:16-alpine` service container, runs migrations, then executes all three test tiers. Playwright artifacts (screenshots, traces) are uploaded on failure.
+
+To view the latest run:
+
+```bash
+gh run list --limit 5
+gh run view --web
+```
 
 ## Known Limitations
 
