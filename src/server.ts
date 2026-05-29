@@ -1,5 +1,6 @@
 import { buildApp } from './app.js';
 import sql from './db/client.js';
+import { startWebhookWorker } from './modules/webhooks/webhooks.worker.js';
 
 async function start(): Promise<void> {
   const app = await buildApp();
@@ -16,8 +17,12 @@ async function start(): Promise<void> {
     process.exit(1);
   }
 
+  const worker = startWebhookWorker();
+  app.log.info('Webhook worker started');
+
   const shutdown = async (signal: string): Promise<void> => {
     app.log.info(`Received ${signal}, shutting down gracefully`);
+    clearInterval(worker);
     await app.close();
     await sql.end();
     process.exit(0);

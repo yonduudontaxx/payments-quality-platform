@@ -8,6 +8,7 @@ import { accountsRoutes } from './modules/accounts/accounts.routes.js';
 import { paymentsRoutes } from './modules/payments/payments.routes.js';
 import { simulationRoutes } from './modules/simulation/simulation.routes.js';
 import { getSimulationConfig } from './modules/simulation/simulation.config.js';
+import { webhooksRoutes } from './modules/webhooks/webhooks.routes.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -66,6 +67,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(accountsRoutes);
   await app.register(paymentsRoutes);
   await app.register(simulationRoutes);
+  await app.register(webhooksRoutes);
 
   return app;
 }

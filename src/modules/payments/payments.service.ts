@@ -4,6 +4,7 @@ import { AppError, NotFoundError } from '../../shared/errors.js';
 import { getSimulationConfig } from '../simulation/simulation.config.js';
 import type { Account, Transaction } from '../../shared/types.js';
 import { validateTransition } from './state-machine.js';
+import { insertWebhookEvent } from '../webhooks/webhooks.service.js';
 
 export interface AuthorizePaymentInput {
   account_id: string;
@@ -46,6 +47,11 @@ export async function authorizePayment(input: AuthorizePaymentInput): Promise<Tr
       `;
       return txRows[0];
     });
+    await insertWebhookEvent(
+      result.id,
+      'payment.authorized',
+      { transaction_id: result.id, account_id: result.account_id, amount_cents: Number(result.amount_cents), status: 'authorized' },
+    );
     return result;
   } catch (err) {
     if (err instanceof AppError && (err.code === 'INSUFFICIENT_FUNDS' || err.code === 'SIMULATED_DECLINE')) {
@@ -75,6 +81,11 @@ export async function capturePayment(id: string): Promise<Transaction> {
     `;
     return updated[0];
   });
+  await insertWebhookEvent(
+    result.id,
+    'payment.captured',
+    { transaction_id: result.id, account_id: result.account_id, amount_cents: Number(result.amount_cents), status: 'captured' },
+  );
   return result;
 }
 
@@ -97,6 +108,11 @@ export async function refundPayment(id: string): Promise<Transaction> {
     `;
     return updated[0];
   });
+  await insertWebhookEvent(
+    result.id,
+    'payment.refunded',
+    { transaction_id: result.id, account_id: result.account_id, amount_cents: Number(result.amount_cents), status: 'refunded' },
+  );
   return result;
 }
 
