@@ -23,7 +23,18 @@ async function idempotencyPlugin(app: FastifyInstance): Promise<void> {
 
     const statusCode = reply.statusCode;
     if (statusCode >= 200 && statusCode < 300) {
-      const body = typeof payload === 'string' ? JSON.parse(payload) : payload;
+      let body: Record<string, unknown>;
+      try {
+        if (Buffer.isBuffer(payload)) {
+          body = JSON.parse(payload.toString('utf-8'));
+        } else if (typeof payload === 'string') {
+          body = JSON.parse(payload);
+        } else {
+          return payload; // stream or null — don't cache
+        }
+      } catch {
+        return payload; // not valid JSON — don't cache
+      }
       await setCachedResponse(key, statusCode, body);
     }
 

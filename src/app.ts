@@ -14,7 +14,9 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // Core plugins
   await app.register(sensible);
-  await app.register(cors);
+  await app.register(cors, {
+    origin: process.env.CORS_ORIGIN ?? false,
+  });
 
   // Idempotency plugin (must be before routes)
   await app.register(idempotencyPlugin);

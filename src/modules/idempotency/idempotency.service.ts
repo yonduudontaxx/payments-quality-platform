@@ -7,7 +7,9 @@ export interface CachedResponse {
 
 export async function getCachedResponse(key: string): Promise<CachedResponse | null> {
   const rows = await sql<CachedResponse[]>`
-    SELECT status_code, body FROM idempotency_cache WHERE key = ${key}
+    SELECT status_code, body FROM idempotency_cache
+    WHERE key = ${key}
+      AND created_at > now() - interval '24 hours'
   `;
   return rows[0] ?? null;
 }
