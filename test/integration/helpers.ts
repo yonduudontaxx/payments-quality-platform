@@ -13,8 +13,14 @@ export async function request(
     payload: options.body as string | object | Buffer | NodeJS.ReadableStream | undefined,
     headers: options.headers,
   })) as LightMyResponse;
-  return {
-    status: response.statusCode,
-    body: response.json<unknown>(),
-  };
+  const raw = response.body;
+  let body: unknown = null;
+  if (raw && raw.length > 0) {
+    try {
+      body = response.json<unknown>();
+    } catch {
+      body = raw;
+    }
+  }
+  return { status: response.statusCode, body };
 }
