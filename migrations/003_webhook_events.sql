@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS webhook_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  transaction_id UUID REFERENCES transactions(id),
+  transaction_id UUID NOT NULL REFERENCES transactions(id),
   event_type TEXT NOT NULL,
   payload JSONB NOT NULL,
   delivery_url TEXT NOT NULL,
@@ -10,3 +10,6 @@ CREATE TABLE IF NOT EXISTS webhook_events (
   next_retry_at TIMESTAMPTZ DEFAULT now(),
   created_at TIMESTAMPTZ DEFAULT now()
 );
+
+CREATE INDEX IF NOT EXISTS idx_webhook_events_status_retry ON webhook_events(status, next_retry_at)
+  WHERE status IN ('pending', 'failed');
