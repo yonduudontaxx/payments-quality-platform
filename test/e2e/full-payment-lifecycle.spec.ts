@@ -58,6 +58,10 @@ test.describe('Full Payment Lifecycle', () => {
     await webhookListener.close();
   });
 
+  test.beforeEach(async ({ request }) => {
+    await request.delete('/simulate/config');
+  });
+
   test('authorize → capture → webhook received', async ({ request }) => {
     // Set a longer timeout for webhook delivery (worker polls every 5s)
     test.setTimeout(25000);

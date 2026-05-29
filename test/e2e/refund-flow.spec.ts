@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Refund Flow', () => {
+  test.beforeEach(async ({ request }) => {
+    await request.delete('/simulate/config');
+  });
+
   test('capture then refund restores balance', async ({ request }) => {
     // Create account
     const accountRes = await request.post('/accounts', {
