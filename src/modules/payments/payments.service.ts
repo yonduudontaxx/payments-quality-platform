@@ -1,4 +1,4 @@
-import type postgres from 'postgres';
+import postgres from 'postgres';
 import sql from '../../db/client.js';
 import { AppError, NotFoundError } from '../../shared/errors.js';
 import { getSimulationConfig } from '../simulation/simulation.config.js';
@@ -54,6 +54,14 @@ export async function authorizePayment(input: AuthorizePaymentInput): Promise<Tr
     );
     return result;
   } catch (err) {
+    // Handle idempotency race: unique constraint violation on idempotency_key
+    if (err instanceof postgres.PostgresError && err.code === '23505' && input.idempotency_key) {
+      const rows = await sql<Transaction[]>`
+        SELECT * FROM transactions WHERE idempotency_key = ${input.idempotency_key}
+      `;
+      if (rows.length > 0) return rows[0];
+    }
+
     if (err instanceof AppError && (err.code === 'INSUFFICIENT_FUNDS' || err.code === 'SIMULATED_DECLINE')) {
       // Persist audit record OUTSIDE the rolled-back transaction
       await sql`

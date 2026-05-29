@@ -150,3 +150,10 @@ Returns the list of queued/delivered webhook events, including delivery status a
 - **DB-backed idempotency cache** — requests bearing an `Idempotency-Key` header are deduplicated via a PostgreSQL-backed cache with a 24-hour TTL, preventing duplicate payments from retried requests.
 - **Exponential backoff retries** — webhook delivery retries follow the schedule `[2s, 4s, 8s, 16s, 32s]` before a delivery is marked permanently failed.
 - **Full test pyramid** — unit tests validate pure logic in isolation, integration tests cover DB interactions, and Playwright E2E tests drive the full HTTP API to verify end-to-end behavior.
+
+## Known Limitations
+
+- **Simulation endpoints are unauthenticated** — In production, `/simulate/*` should be protected by API key or restricted to non-production environments
+- **No webhook HMAC signatures** — Real payment gateways sign webhook payloads; this platform sends unsigned payloads
+- **Simulation config is in-process** — Fault injection config is per-process and resets on restart; multi-replica deployments would need shared config (e.g., via Redis or DB)
+- **Idempotency cache grows unboundedly** — TTL filtering prevents stale responses but rows are not actively deleted; a cleanup job would be needed in production

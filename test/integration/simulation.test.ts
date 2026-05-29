@@ -78,7 +78,7 @@ describe('Simulation', () => {
 
     // Delete config — resets to defaults
     const deleteRes = await request(app, 'DELETE', '/simulate/config');
-    expect(deleteRes.status).toBe(200);
+    expect(deleteRes.status).toBe(204);
 
     // Next request should NOT be delayed by 200ms
     const start = Date.now();
