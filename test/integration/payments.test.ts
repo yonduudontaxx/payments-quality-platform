@@ -14,7 +14,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await app.close();
-  await sql.end();
 });
 
 describe('Payment API — happy path', () => {
@@ -118,7 +117,8 @@ describe('Payment API — error cases', () => {
     const auth = authRes.body as Record<string, unknown>;
     const txId = auth.id as string;
 
-    await request(app, 'POST', `/payments/${txId}/capture`);
+    const firstCapture = await request(app, 'POST', `/payments/${txId}/capture`);
+    expect(firstCapture.status).toBe(200);
 
     // Second capture should fail
     const res = await request(app, 'POST', `/payments/${txId}/capture`);

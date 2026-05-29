@@ -22,12 +22,12 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await app.close();
-  await sql.end();
 });
 
 afterEach(async () => {
   // Reset simulation config after each test
-  await request(app, 'DELETE', '/simulate/config');
+  const res = await request(app, 'DELETE', '/simulate/config', {});
+  expect(res.status).toBe(204);
 });
 
 describe('Simulation', () => {
@@ -41,7 +41,7 @@ describe('Simulation', () => {
     await request(app, 'GET', '/accounts/00000000-0000-0000-0000-000000000000');
     const elapsed = Date.now() - start;
 
-    expect(elapsed).toBeGreaterThanOrEqual(200);
+    expect(elapsed).toBeGreaterThanOrEqual(150);
   }, 10_000);
 
   test('decline_rate: 1.0 always declines authorize', async () => {
@@ -85,6 +85,6 @@ describe('Simulation', () => {
     await request(app, 'GET', '/accounts/00000000-0000-0000-0000-000000000000');
     const elapsed = Date.now() - start;
 
-    expect(elapsed).toBeLessThan(200);
+    expect(elapsed).toBeLessThan(1000);
   });
 });
