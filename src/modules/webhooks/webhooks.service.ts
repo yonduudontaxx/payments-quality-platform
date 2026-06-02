@@ -1,11 +1,6 @@
-import type postgres from 'postgres';
-import sql from '../../db/client.js';
+import sql, { toJson } from '../../db/client.js';
 import { getWebhookDeliveryUrl } from './webhook.config.js';
 import type { WebhookEvent } from '../../shared/types.js';
-
-function toJson(value: Record<string, unknown>): postgres.JSONValue {
-  return value as unknown as postgres.JSONValue;
-}
 
 export async function insertWebhookEvent(
   transactionId: string,

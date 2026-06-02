@@ -1,12 +1,15 @@
 import fp from 'fastify-plugin';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { getCachedResponse, setCachedResponse } from './idempotency.service.js';
+
+function getIdempotencyKey(request: FastifyRequest): string | undefined {
+  if (request.method !== 'POST') return undefined;
+  return request.headers['idempotency-key'] as string | undefined;
+}
 
 async function idempotencyPlugin(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', async (request, reply) => {
-    if (request.method !== 'POST') return;
-
-    const key = request.headers['idempotency-key'] as string | undefined;
+    const key = getIdempotencyKey(request);
     if (!key) return;
 
     const cached = await getCachedResponse(key);
@@ -16,9 +19,7 @@ async function idempotencyPlugin(app: FastifyInstance): Promise<void> {
   });
 
   app.addHook('onSend', async (request, reply, payload) => {
-    if (request.method !== 'POST') return payload;
-
-    const key = request.headers['idempotency-key'] as string | undefined;
+    const key = getIdempotencyKey(request);
     if (!key) return payload;
 
     const statusCode = reply.statusCode;

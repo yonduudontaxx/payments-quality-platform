@@ -77,28 +77,36 @@ The server will be available at `http://localhost:3000`.
 The project implements a full test pyramid: unit tests, integration tests, and E2E tests.
 
 ```bash
-# Unit tests (no DB required)
-npm run test:unit
+# Run all tests and open the Allure report automatically
+npm run ci
 
-# Integration tests (requires PostgreSQL)
-docker compose up -d postgres
-npm run migrate
-npm run test:integration
-
-# E2E tests (requires running server + PostgreSQL)
-npm run dev &
-npm run test:e2e
+# Run individual tiers
+npm run test:unit         # Jest unit tests (no DB required)
+npm run test:integration  # Jest integration tests (requires PostgreSQL)
+npm run test:e2e          # Playwright E2E tests (auto-starts server if not running)
 ```
+
+The E2E tests use Playwright's `webServer` config to automatically start the dev server when it isn't already running. `reuseExistingServer: true` means a manually started server is used as-is.
 
 ### Test Scripts Summary
 
 | Command | Description | Requires |
 |---------|-------------|---------|
+| `npm run ci` | Full suite — all tests + Allure report | PostgreSQL |
 | `npm run test:unit` | Jest unit tests — pure logic, no I/O | Nothing |
 | `npm run test:integration` | Jest integration tests — hits the DB | PostgreSQL |
-| `npm run test:e2e` | Playwright E2E tests — full HTTP flows | Server + PostgreSQL |
+| `npm run test:e2e` | Playwright E2E tests — full HTTP flows | PostgreSQL |
+| `npm run report` | Generate and open the Allure report | Previous test run |
 | `npm run build` | TypeScript compilation | Nothing |
 | `npm run migrate` | Run database migrations | PostgreSQL |
+
+### Allure Report
+
+Allure results are written to `allure-results/jest/` (unit + integration) and `allure-results/playwright/` (E2E) after each run. `npm run ci` generates and opens the combined report automatically. To view a report from a previous run:
+
+```bash
+npm run report
+```
 
 ## Simulation / Fault Injection
 

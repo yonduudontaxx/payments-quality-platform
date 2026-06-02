@@ -1,9 +1,9 @@
 import postgres from 'postgres';
-import sql from '../../db/client.js';
+import sql, { toJson } from '../../db/client.js';
 import { AppError, NotFoundError } from '../../shared/errors.js';
 import { getSimulationConfig } from '../simulation/simulation.config.js';
 import type { Account, Transaction } from '../../shared/types.js';
-import { validateTransition } from './state-machine.js';
+import { validateTransition, getResultStatus } from './state-machine.js';
 import { insertWebhookEvent } from '../webhooks/webhooks.service.js';
 
 export interface AuthorizePaymentInput {
@@ -13,8 +13,13 @@ export interface AuthorizePaymentInput {
   metadata?: Record<string, unknown>;
 }
 
-function toJson(value: Record<string, unknown>): postgres.JSONValue {
-  return value as unknown as postgres.JSONValue;
+function insertPaymentWebhookEvent(tx: Transaction): Promise<void> {
+  return insertWebhookEvent(tx.id, `payment.${tx.status}`, {
+    transaction_id: tx.id,
+    account_id: tx.account_id,
+    amount_cents: Number(tx.amount_cents),
+    status: tx.status,
+  });
 }
 
 export async function authorizePayment(input: AuthorizePaymentInput): Promise<Transaction> {
@@ -47,11 +52,7 @@ export async function authorizePayment(input: AuthorizePaymentInput): Promise<Tr
       `;
       return txRows[0];
     });
-    await insertWebhookEvent(
-      result.id,
-      'payment.authorized',
-      { transaction_id: result.id, account_id: result.account_id, amount_cents: Number(result.amount_cents), status: 'authorized' },
-    );
+    await insertPaymentWebhookEvent(result);
     return result;
   } catch (err) {
     // Handle idempotency race: unique constraint violation on idempotency_key
@@ -83,17 +84,13 @@ export async function capturePayment(id: string): Promise<Transaction> {
     if (!transaction) throw new NotFoundError('Transaction', id);
     validateTransition(transaction.status, 'capture');
     const updated = await tx<Transaction[]>`
-      UPDATE transactions SET status = 'captured', updated_at = now()
+      UPDATE transactions SET status = ${getResultStatus('capture')}, updated_at = now()
       WHERE id = ${id}
       RETURNING *
     `;
     return updated[0];
   });
-  await insertWebhookEvent(
-    result.id,
-    'payment.captured',
-    { transaction_id: result.id, account_id: result.account_id, amount_cents: Number(result.amount_cents), status: 'captured' },
-  );
+  await insertPaymentWebhookEvent(result);
   return result;
 }
 
@@ -106,7 +103,7 @@ export async function refundPayment(id: string): Promise<Transaction> {
     if (!transaction) throw new NotFoundError('Transaction', id);
     validateTransition(transaction.status, 'refund');
     const updated = await tx<Transaction[]>`
-      UPDATE transactions SET status = 'refunded', updated_at = now()
+      UPDATE transactions SET status = ${getResultStatus('refund')}, updated_at = now()
       WHERE id = ${id}
       RETURNING *
     `;
@@ -116,11 +113,7 @@ export async function refundPayment(id: string): Promise<Transaction> {
     `;
     return updated[0];
   });
-  await insertWebhookEvent(
-    result.id,
-    'payment.refunded',
-    { transaction_id: result.id, account_id: result.account_id, amount_cents: Number(result.amount_cents), status: 'refunded' },
-  );
+  await insertPaymentWebhookEvent(result);
   return result;
 }
 

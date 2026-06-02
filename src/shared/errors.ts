@@ -15,12 +15,6 @@ export class NotFoundError extends AppError {
   }
 }
 
-export class ValidationError extends AppError {
-  constructor(message: string) {
-    super(message, 400, 'VALIDATION_ERROR');
-  }
-}
-
 export class PaymentError extends AppError {
   constructor(message: string, code: string) {
     super(message, 422, code);
