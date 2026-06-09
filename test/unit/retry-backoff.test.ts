@@ -1,11 +1,10 @@
 import { describe, it, expect } from '@jest/globals';
 
-// The retry delays from the webhook worker
 const RETRY_DELAYS_MS = [2000, 4000, 8000, 16000, 32000];
 const MAX_ATTEMPTS = RETRY_DELAYS_MS.length; // 5
 
 function getNextDelay(attempts: number): number | null {
-  if (attempts >= MAX_ATTEMPTS) return null; // permanently failed
+  if (attempts >= MAX_ATTEMPTS) return null;
   return RETRY_DELAYS_MS[attempts - 1] ?? 32_000;
 }
 
@@ -13,40 +12,44 @@ function isPermanentlyFailed(attempts: number): boolean {
   return attempts >= MAX_ATTEMPTS;
 }
 
-describe('Webhook retry backoff', () => {
-  it('returns 2000ms after first failure (1 attempt)', () => {
-    expect(getNextDelay(1)).toBe(2000);
+describe('Webhook retry backoff — delay values', () => {
+  const cases: [number, number][] = [
+    [1, 2000],
+    [2, 4000],
+    [3, 8000],
+    [4, 16000],
+  ];
+
+  it.each(cases)('after %i attempt(s) next delay is %ims', (attempts, expected) => {
+    expect(getNextDelay(attempts)).toBe(expected);
   });
 
-  it('returns 4000ms after second failure', () => {
-    expect(getNextDelay(2)).toBe(4000);
-  });
-
-  it('returns 8000ms after third failure', () => {
-    expect(getNextDelay(3)).toBe(8000);
-  });
-
-  it('returns 16000ms after fourth failure', () => {
-    expect(getNextDelay(4)).toBe(16000);
-  });
-
-  it('returns null after 5 attempts (permanently failed)', () => {
-    expect(getNextDelay(5)).toBeNull();
-  });
-
-  it('marks permanently failed after 5 attempts', () => {
-    expect(isPermanentlyFailed(5)).toBe(true);
-  });
-
-  it('does not mark permanently failed before 5 attempts', () => {
-    expect(isPermanentlyFailed(4)).toBe(false);
-    expect(isPermanentlyFailed(3)).toBe(false);
-  });
-
-  it('delays increase with each retry', () => {
+  it('delays are strictly increasing', () => {
     const delays = [1, 2, 3, 4].map(a => getNextDelay(a) as number);
     for (let i = 1; i < delays.length; i++) {
       expect(delays[i]).toBeGreaterThan(delays[i - 1]);
     }
+  });
+
+  it('returns null at exactly MAX_ATTEMPTS (5)', () => {
+    expect(getNextDelay(5)).toBeNull();
+  });
+
+  it('returns null beyond MAX_ATTEMPTS', () => {
+    expect(getNextDelay(6)).toBeNull();
+    expect(getNextDelay(100)).toBeNull();
+  });
+});
+
+describe('Webhook retry backoff — permanent failure', () => {
+  const permanentCases: [number, boolean][] = [
+    [3, false],
+    [4, false],
+    [5, true],
+    [6, true],
+  ];
+
+  it.each(permanentCases)('isPermanentlyFailed(%i) === %s', (attempts, expected) => {
+    expect(isPermanentlyFailed(attempts)).toBe(expected);
   });
 });

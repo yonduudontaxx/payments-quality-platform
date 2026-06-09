@@ -20,20 +20,29 @@ describe('Payment API — happy path', () => {
   let accountId: string;
   let transactionId: string;
 
-  test('POST /accounts creates account', async () => {
-    const res = await request(app, 'POST', '/accounts', {
+  // Set up a shared account for the lifecycle tests so no single test owns
+  // the accountId/transactionId — setup failures are clearly attributed to beforeAll
+  beforeAll(async () => {
+    const accountRes = await request(app, 'POST', '/accounts', {
       body: { owner_name: 'Happy Path User', initial_balance_cents: 100_000, currency: 'USD' },
     });
+    expect(accountRes.status).toBe(201);
+    accountId = ((accountRes.body as Record<string, unknown>).id) as string;
+  });
 
+  test('POST /accounts creates account', async () => {
+    const res = await request(app, 'POST', '/accounts', {
+      body: { owner_name: 'Account Test User', initial_balance_cents: 50_000, currency: 'USD' },
+    });
     expect(res.status).toBe(201);
     const body = res.body as Record<string, unknown>;
     expect(body.id).toBeDefined();
-    expect(body.owner_name).toBe('Happy Path User');
-    expect(body.balance_cents).toBe(100_000);
+    expect(body.owner_name).toBe('Account Test User');
+    expect(body.balance_cents).toBe(50_000);
     expect(body.currency).toBe('USD');
-    expect(body.created_at).toBeDefined();
-
-    accountId = body.id as string;
+    expect(typeof body.created_at).toBe('string');
+    // ISO 8601 format
+    expect(() => new Date(body.created_at as string).toISOString()).not.toThrow();
   });
 
   test('POST /payments/authorize reserves funds', async () => {
@@ -50,11 +59,9 @@ describe('Payment API — happy path', () => {
 
     transactionId = body.id as string;
 
-    // Verify account balance reduced
     const accountRes = await request(app, 'GET', `/accounts/${accountId}`);
     expect(accountRes.status).toBe(200);
-    const account = accountRes.body as Record<string, unknown>;
-    expect(account.balance_cents).toBe(50_000);
+    expect((accountRes.body as Record<string, unknown>).balance_cents).toBe(50_000);
   });
 
   test('POST /payments/:id/capture settles payment', async () => {
@@ -74,11 +81,9 @@ describe('Payment API — happy path', () => {
     expect(body.status).toBe('refunded');
     expect(body.id).toBe(transactionId);
 
-    // Verify balance restored
     const accountRes = await request(app, 'GET', `/accounts/${accountId}`);
     expect(accountRes.status).toBe(200);
-    const account = accountRes.body as Record<string, unknown>;
-    expect(account.balance_cents).toBe(100_000);
+    expect((accountRes.body as Record<string, unknown>).balance_cents).toBe(100_000);
   });
 });
 
@@ -102,6 +107,22 @@ describe('Payment API — error cases', () => {
   test('GET non-existent transaction returns 404', async () => {
     const res = await request(app, 'GET', '/payments/00000000-0000-0000-0000-000000000000');
     expect(res.status).toBe(404);
+  });
+
+  test('refund an authorized (not-yet-captured) transaction returns 422', async () => {
+    const accountRes = await request(app, 'POST', '/accounts', {
+      body: { owner_name: 'Early Refund User', initial_balance_cents: 10_000 },
+    });
+    const account = accountRes.body as Record<string, unknown>;
+
+    const authRes = await request(app, 'POST', '/payments/authorize', {
+      body: { account_id: account.id, amount_cents: 1_000 },
+    });
+    const auth = authRes.body as Record<string, unknown>;
+
+    const res = await request(app, 'POST', `/payments/${auth.id}/refund`);
+    expect(res.status).toBe(422);
+    expect((res.body as Record<string, unknown>).error).toBe('INVALID_STATE_TRANSITION');
   });
 
   test('capture an already-captured transaction returns 422', async () => {

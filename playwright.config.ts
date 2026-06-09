@@ -13,10 +13,11 @@ export default defineConfig({
   use: {
     baseURL: process.env.BASE_URL ?? 'http://127.0.0.1:3000',
   },
-  webServer: {
+  // Skip webServer when BASE_URL is set — caller is responsible for the server.
+  // Without BASE_URL, Playwright starts the payments dev server on port 3000.
+  webServer: process.env.BASE_URL ? undefined : {
     command: 'npm run dev',
     port: 3000,
-    reuseExistingServer: true,
     timeout: 60000,
   },
 });

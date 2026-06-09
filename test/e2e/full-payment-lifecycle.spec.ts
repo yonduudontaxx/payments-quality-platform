@@ -96,8 +96,24 @@ test.describe('Full Payment Lifecycle', () => {
     // Wait for webhook delivery (worker polls every 5s)
     await waitFor(() => webhookListener.getEvents().length >= 2, 15000);
 
-    const webhookEvents = webhookListener.getEvents();
+    // webhookEvents are the raw payloads delivered to the listener (event.payload in DB terms)
+    const webhookEvents = webhookListener.getEvents() as Array<Record<string, unknown>>;
     expect(webhookEvents.length).toBeGreaterThanOrEqual(2);
+
+    // Verify status values — payload.status reflects the transaction state at each event
+    const statuses = webhookEvents.map(e => e.status as string);
+    expect(statuses).toContain('authorized');
+    expect(statuses).toContain('captured');
+
+    // Verify both events reference the correct transaction
+    for (const event of webhookEvents) {
+      expect(event.transaction_id).toBe(authorization.id);
+    }
+
+    // Authorize event must arrive before capture event
+    const authorizedIdx = statuses.indexOf('authorized');
+    const capturedIdx = statuses.indexOf('captured');
+    expect(authorizedIdx).toBeLessThan(capturedIdx);
 
     // Verify transaction details
     const getRes = await request.get(`/payments/${authorization.id}`);

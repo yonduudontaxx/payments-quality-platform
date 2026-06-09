@@ -18,7 +18,7 @@ export function startWebhookWorker(): NodeJS.Timeout {
 
 const WORKER_LOCK_KEY = 1_234_567_890; // arbitrary unique key for this worker
 
-async function processPendingWebhooks(): Promise<void> {
+export async function processPendingWebhooks(): Promise<void> {
   // Try to acquire advisory lock — skip this cycle if another process holds it
   const [{ acquired }] = await sql<[{ acquired: boolean }]>`
     SELECT pg_try_advisory_lock(${WORKER_LOCK_KEY}) AS acquired
@@ -42,7 +42,7 @@ async function processPendingWebhooks(): Promise<void> {
   }
 }
 
-async function processEvent(event: WebhookEvent): Promise<void> {
+export async function processEvent(event: WebhookEvent): Promise<void> {
   try {
     await deliverWebhookEvent(event);
     await sql`

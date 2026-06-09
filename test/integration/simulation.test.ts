@@ -41,7 +41,7 @@ describe('Simulation', () => {
     await request(app, 'GET', '/accounts/00000000-0000-0000-0000-000000000000');
     const elapsed = Date.now() - start;
 
-    expect(elapsed).toBeGreaterThanOrEqual(150);
+    expect(elapsed).toBeGreaterThanOrEqual(200);
   }, 10_000);
 
   test('decline_rate: 1.0 always declines authorize', async () => {
@@ -68,6 +68,46 @@ describe('Simulation', () => {
     });
 
     expect(res.status).toBe(201);
+  });
+
+  test('GET /simulate/config returns current config', async () => {
+    await request(app, 'POST', '/simulate/config', {
+      body: { timeout_ms: 100, decline_rate: 0.5 },
+    });
+    const res = await request(app, 'GET', '/simulate/config');
+    expect(res.status).toBe(200);
+    const body = res.body as Record<string, unknown>;
+    expect(body.timeout_ms).toBe(100);
+    expect(body.decline_rate).toBe(0.5);
+  });
+
+  test('timeout_ms boundary: 0 applies no delay', async () => {
+    await request(app, 'POST', '/simulate/config', { body: { timeout_ms: 0 } });
+    const start = Date.now();
+    await request(app, 'GET', `/accounts/${accountId}`);
+    expect(Date.now() - start).toBeLessThan(500);
+  });
+
+  test('timeout_ms boundary: 30000 is accepted by schema', async () => {
+    const res = await request(app, 'POST', '/simulate/config', { body: { timeout_ms: 30000 } });
+    expect(res.status).toBe(200);
+    expect((res.body as Record<string, unknown>).timeout_ms).toBe(30000);
+  });
+
+  test('decline_rate boundary: 0 never declines', async () => {
+    await request(app, 'POST', '/simulate/config', { body: { decline_rate: 0 } });
+    const res = await request(app, 'POST', '/payments/authorize', {
+      body: { account_id: accountId, amount_cents: 100 },
+    });
+    expect(res.status).toBe(201);
+  });
+
+  test('decline_rate boundary: 1.0 always declines', async () => {
+    await request(app, 'POST', '/simulate/config', { body: { decline_rate: 1.0 } });
+    const res = await request(app, 'POST', '/payments/authorize', {
+      body: { account_id: accountId, amount_cents: 100 },
+    });
+    expect(res.status).toBe(402);
   });
 
   test('DELETE /simulate/config resets simulation', async () => {

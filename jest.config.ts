@@ -7,6 +7,7 @@ const config: Config = {
     resultsDir: 'allure-results/jest',
   },
   roots: ['<rootDir>/test'],
+  testTimeout: 10000,
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
       useESM: false,
@@ -18,6 +19,19 @@ const config: Config = {
   },
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
+  },
+  collectCoverageFrom: [
+    'src/**/*.ts',
+    '!src/db/migrate.ts',
+    '!src/server.ts',
+  ],
+  coverageThreshold: {
+    global: {
+      branches: 60,
+      functions: 70,
+      lines: 70,
+      statements: 70,
+    },
   },
 };
 

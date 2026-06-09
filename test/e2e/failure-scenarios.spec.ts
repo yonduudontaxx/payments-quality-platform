@@ -33,7 +33,7 @@ test.describe('Failure Scenarios', () => {
     const elapsed = Date.now() - start;
 
     expect(accountRes.status()).toBe(201);
-    expect(elapsed).toBeGreaterThanOrEqual(200); // Allow some slack
+    expect(elapsed).toBeGreaterThanOrEqual(300);
   });
 
   test('decline_rate: 1.0 always declines authorize', async ({ request }) => {
