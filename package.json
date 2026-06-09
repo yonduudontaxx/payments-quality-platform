@@ -12,8 +12,11 @@
     "test:integration": "jest --runInBand --forceExit --testPathPattern=test/integration",
     "test:e2e": "playwright test",
     "test": "npm run test:unit",
-    "ci": "npm run test:unit && npm run test:integration && npm run test:e2e && npm run report",
-    "report": "allure generate allure-results/jest allure-results/playwright --output allure-report --open"
+    "clean:results": "rm -rf allure-results/jest allure-results/playwright && mkdir -p allure-results/jest allure-results/playwright",
+    "report:generate": "allure generate allure-results/jest allure-results/playwright --output allure-report",
+    "report:open": "allure open allure-report",
+    "report": "npm run report:generate && npm run report:open",
+    "ci": "npm run clean:results && npm run test:unit && npm run test:integration && npm run test:e2e && npm run report:generate"
   },
   "repository": {
     "type": "git",
