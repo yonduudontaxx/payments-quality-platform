@@ -1,12 +1,15 @@
 import { describe, test, expect, beforeAll, afterAll, afterEach } from '@jest/globals';
 import * as http from 'http';
 import * as net from 'net';
+import postgres from 'postgres';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../../src/app.js';
 import sql, { toJson } from '../../src/db/client.js';
-import { processEvent, processPendingWebhooks } from '../../src/modules/webhooks/webhooks.worker.js';
+import { processEvent, processPendingWebhooks, WORKER_LOCK_KEY } from '../../src/modules/webhooks/webhooks.worker.js';
 import type { WebhookEvent } from '../../src/shared/types.js';
 import { request } from './helpers.js';
+
+const DB_URL = process.env.DATABASE_URL ?? 'postgres://payments:payments@localhost:5432/payments_dev';
 
 let app: FastifyInstance;
 let testTransactionId: string;
@@ -197,6 +200,48 @@ describe('Webhook worker — processPendingWebhooks', () => {
       expect(updatedDue.status).toBe('delivered');
       expect(updatedFuture.status).toBe('failed');
     } finally {
+      await server.close();
+    }
+  });
+
+  test('leaves the advisory lock free after a cycle', async () => {
+    const server = createMockServer(200);
+    await server.start();
+    const probe = postgres(DB_URL, { max: 1 });
+    try {
+      await insertWebhookEventDirect({ delivery_url: server.url() });
+      await processPendingWebhooks();
+
+      const [{ acquired }] = await probe<{ acquired: boolean }[]>`
+        SELECT pg_try_advisory_lock(${WORKER_LOCK_KEY}) AS acquired
+      `;
+      expect(acquired).toBe(true);
+      await probe`SELECT pg_advisory_unlock(${WORKER_LOCK_KEY})`;
+    } finally {
+      await probe.end();
+      await server.close();
+    }
+  });
+
+  test('skips the cycle when another session already holds the lock', async () => {
+    const server = createMockServer(200);
+    await server.start();
+    const holder = postgres(DB_URL, { max: 1 });
+    try {
+      const [{ acquired }] = await holder<{ acquired: boolean }[]>`
+        SELECT pg_try_advisory_lock(${WORKER_LOCK_KEY}) AS acquired
+      `;
+      expect(acquired).toBe(true);
+
+      const event = await insertWebhookEventDirect({ delivery_url: server.url() });
+      await processPendingWebhooks();
+
+      const [row] = await sql<WebhookEvent[]>`SELECT * FROM webhook_events WHERE id = ${event.id}`;
+      expect(row.status).toBe('pending');
+
+      await holder`SELECT pg_advisory_unlock(${WORKER_LOCK_KEY})`;
+    } finally {
+      await holder.end();
       await server.close();
     }
   });
