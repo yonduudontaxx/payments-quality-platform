@@ -4,7 +4,10 @@ import { getCachedResponse, setCachedResponse } from './idempotency.service.js';
 
 function getIdempotencyKey(request: FastifyRequest): string | undefined {
   if (request.method !== 'POST') return undefined;
-  return request.headers['idempotency-key'] as string | undefined;
+  const key = request.headers['idempotency-key'] as string | undefined;
+  if (!key) return undefined;
+  const path = request.url.split('?')[0];
+  return `${request.method}:${path}:${key}`;
 }
 
 async function idempotencyPlugin(app: FastifyInstance): Promise<void> {
