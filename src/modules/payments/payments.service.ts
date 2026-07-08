@@ -68,7 +68,7 @@ export async function authorizePayment(input: AuthorizePaymentInput): Promise<Tr
       await sql`
         INSERT INTO transactions (account_id, type, amount_cents, status, idempotency_key, metadata)
         VALUES (${input.account_id}, 'authorize', ${input.amount_cents}, 'failed',
-                ${input.idempotency_key ?? null}, ${sql.json(toJson(input.metadata ?? {}))})
+                NULL, ${sql.json(toJson(input.metadata ?? {}))})
       `;
     }
     throw err;
