@@ -6,4 +6,6 @@ dist
 coverage
 playwright-report
 test-results
+allure-results
+allure-report
 CLAUDE.md
