@@ -16,29 +16,37 @@ export function startWebhookWorker(): NodeJS.Timeout {
   }, POLL_INTERVAL_MS);
 }
 
-const WORKER_LOCK_KEY = 1_234_567_890; // arbitrary unique key for this worker
+export const WORKER_LOCK_KEY = 1_234_567_890; // arbitrary unique key for this worker
 
 export async function processPendingWebhooks(): Promise<void> {
-  // Try to acquire advisory lock — skip this cycle if another process holds it
-  const [{ acquired }] = await sql<[{ acquired: boolean }]>`
-    SELECT pg_try_advisory_lock(${WORKER_LOCK_KEY}) AS acquired
-  `;
-  if (!acquired) return;
-
+  const conn = await sql.reserve();
   try {
-    const events = await sql<WebhookEvent[]>`
-      SELECT * FROM webhook_events
-      WHERE status IN ('pending', 'failed')
-        AND next_retry_at <= now()
-      ORDER BY next_retry_at ASC
-      LIMIT 10
+    const [{ acquired }] = await conn<[{ acquired: boolean }]>`
+      SELECT pg_try_advisory_lock(${WORKER_LOCK_KEY}) AS acquired
     `;
+    if (!acquired) return;
 
-    for (const event of events) {
-      await processEvent(event);
+    try {
+      const events = await sql<WebhookEvent[]>`
+        SELECT * FROM webhook_events
+        WHERE status IN ('pending', 'failed')
+          AND next_retry_at <= now()
+        ORDER BY next_retry_at ASC
+        LIMIT 10
+      `;
+
+      for (const event of events) {
+        await processEvent(event);
+      }
+    } finally {
+      try {
+        await conn`SELECT pg_advisory_unlock(${WORKER_LOCK_KEY})`;
+      } catch (err) {
+        logger.warn({ err }, 'Advisory unlock failed');
+      }
     }
   } finally {
-    await sql`SELECT pg_advisory_unlock(${WORKER_LOCK_KEY})`;
+    conn.release();
   }
 }
 
