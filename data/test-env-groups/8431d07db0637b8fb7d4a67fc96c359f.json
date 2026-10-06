@@ -1,0 +1,1 @@
+{"id":"8431d07db0637b8fb7d4a67fc96c359f","fullName":"payments-quality-platform:test/integration/validation.test.ts#Schema validation — POST /accounts empty owner_name (minLength violation) returns 400","name":"empty owner_name (minLength violation) returns 400","status":"passed","testResultsByEnv":{"default":"4618c89216112913a4480dd17044e00e"}}

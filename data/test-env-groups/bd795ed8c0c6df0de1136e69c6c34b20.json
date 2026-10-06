@@ -1,0 +1,1 @@
+{"id":"bd795ed8c0c6df0de1136e69c6c34b20","fullName":"payments-quality-platform:test/integration/webhooks.test.ts#Webhook worker — processPendingWebhooks skips the cycle when another session already holds the lock","name":"skips the cycle when another session already holds the lock","status":"passed","testResultsByEnv":{"default":"deec04c7e01eceac162cefb6b637e3e8"}}

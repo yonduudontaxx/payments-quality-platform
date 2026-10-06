@@ -1,0 +1,1 @@
+{"id":"328fb1e43bab3e3c839973e502f23d0b","fullName":"payments-quality-platform:test/integration/payments.test.ts#Payment API — error cases authorize with insufficient funds returns 402","name":"authorize with insufficient funds returns 402","status":"passed","testResultsByEnv":{"default":"a544e3014643c6996844a5772097a29d"}}

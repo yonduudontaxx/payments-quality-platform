@@ -1,0 +1,1 @@
+[{"name":"Run.Trigger","values":["push"]},{"name":"Run.Id","values":["37488477553"]},{"name":"Commit","values":["b7be64efcdc5b6b8776d0b48414710edd898382e"]},{"name":"Branch","values":["main"]},{"name":"Server.NODE_ENV","values":["test"]},{"name":"Server.Database","values":["localhost:5432/payments_test"]},{"name":"Server.Node","values":["v24.21.0"]}]

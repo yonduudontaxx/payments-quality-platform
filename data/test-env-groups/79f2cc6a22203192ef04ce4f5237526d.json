@@ -1,0 +1,1 @@
+{"id":"79f2cc6a22203192ef04ce4f5237526d","fullName":"payments-quality-platform:test/integration/payments.test.ts#Payment API — happy path POST /payments/:id/refund restores balance","name":"POST /payments/:id/refund restores balance","status":"passed","testResultsByEnv":{"default":"23d89792bb6f660c2f6f9b5234f07822"}}

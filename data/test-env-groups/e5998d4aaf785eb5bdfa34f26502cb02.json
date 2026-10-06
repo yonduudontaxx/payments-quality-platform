@@ -1,0 +1,1 @@
+{"id":"e5998d4aaf785eb5bdfa34f26502cb02","fullName":"payments-quality-platform:test/integration/payments.test.ts#Payment API — error cases GET non-existent transaction returns 404","name":"GET non-existent transaction returns 404","status":"passed","testResultsByEnv":{"default":"2429a83ba37698f3dd177dad397a8881"}}

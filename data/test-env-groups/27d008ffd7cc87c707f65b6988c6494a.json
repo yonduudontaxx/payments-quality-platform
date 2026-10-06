@@ -1,0 +1,1 @@
+{"id":"27d008ffd7cc87c707f65b6988c6494a","fullName":"payments-quality-platform:test/unit/state-machine.test.ts#validateTransition — valid transitions captured → refund does not throw","name":"captured → refund does not throw","status":"passed","testResultsByEnv":{"default":"d37ad23abb23d1e2701974e64a55a8ee"}}

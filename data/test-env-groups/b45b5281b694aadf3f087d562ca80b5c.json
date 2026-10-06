@@ -1,0 +1,1 @@
+{"id":"b45b5281b694aadf3f087d562ca80b5c","fullName":"payments-quality-platform:test/integration/validation.test.ts#Schema validation — POST /accounts missing owner_name returns 400","name":"missing owner_name returns 400","status":"passed","testResultsByEnv":{"default":"694eef6e3768915deb23f606ce94891f"}}

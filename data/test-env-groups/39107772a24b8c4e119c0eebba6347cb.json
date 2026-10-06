@@ -1,0 +1,1 @@
+{"id":"39107772a24b8c4e119c0eebba6347cb","fullName":"payments-quality-platform:test/unit/state-machine.test.ts#validateTransition — invalid transitions failed → refund throws PaymentError","name":"failed → refund throws PaymentError","status":"passed","testResultsByEnv":{"default":"c69ff174ec968e5566c865332bad33ff"}}
