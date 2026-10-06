@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
-      tests_ran: ${{ steps.unit.outcome != 'skipped' }}
+      tests_ran: ${{ steps.unit.outcome == 'success' || steps.unit.outcome == 'failure' }}
     services:
       postgres:
         image: postgres:16-alpine
@@ -261,8 +261,13 @@ jobs:
         with:
           name: allure-report
           path: site
+      - name: Refuse to publish an empty report
+        run: |
+          total=$(jq -r '.stats.total // 0' site/summary.json)
+          echo "report contains $total tests"
+          if [ "$total" -lt 1 ]; then echo "::error::Allure report has no test results; keeping the previously published report"; exit 1; fi
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: site
