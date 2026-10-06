@@ -176,7 +176,7 @@ type check → build → migrate → unit tests ─┬─→ integration tests �
 
 Each test job gets its own `postgres:16-alpine` service container. Before the E2E tests run, the workflow reads the running server's process environment and fails if `NODE_ENV` is not `test` or `DATABASE_URL` does not point at `payments_test`.
 
-The `allure-report` artifact contains the combined report. Its **Environment** panel records the trigger (`push`, `pull_request`, `schedule` or `workflow_dispatch`), run id, commit, branch, and the server's runtime `NODE_ENV`, database and Node version. Playwright reports are uploaded on E2E failure.
+The latest combined report from `main` is published at **https://yonduudontaxx.github.io/payments-quality-platform/**. It is updated by push, scheduled and manual runs on `main`, and only when the unit tests actually ran, so a type-check or build failure keeps the previous report. Every run, including pull requests, also uploads the combined report as the `allure-report` artifact (90-day retention). The report's **Environment** panel records the trigger (`push`, `pull_request`, `schedule` or `workflow_dispatch`), run id, commit, branch, and the server's runtime `NODE_ENV`, database and Node version. Playwright reports are uploaded on E2E failure. The E2E server runs with `LOG_LEVEL=info`, so the **Server logs on failure** step prints its request log; without `LOG_LEVEL`, logging stays off under `NODE_ENV=test`.
 
 Only pull-request runs cancel an in-progress run for the same ref; scheduled, manual and `main` runs always complete.
 

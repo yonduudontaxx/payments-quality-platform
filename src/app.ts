@@ -12,7 +12,9 @@ import { webhooksRoutes } from './modules/webhooks/webhooks.routes.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: process.env.NODE_ENV !== 'test',
+    logger: process.env.LOG_LEVEL
+      ? { level: process.env.LOG_LEVEL }
+      : process.env.NODE_ENV !== 'test',
   });
 
   // Core plugins
