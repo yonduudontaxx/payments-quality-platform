@@ -6,10 +6,12 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * *"
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -39,8 +41,8 @@ jobs:
     env:
       DATABASE_URL: postgres://payments:payments@localhost:5432/payments_test
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -55,7 +57,7 @@ jobs:
         run: npm run test:unit
       - name: Upload unit results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: allure-jest-unit
           path: allure-results/jest
@@ -83,8 +85,8 @@ jobs:
     env:
       DATABASE_URL: postgres://payments:payments@localhost:5432/payments_test
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -95,7 +97,7 @@ jobs:
         run: npm run test:integration
       - name: Upload integration results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: allure-jest-integration
           path: allure-results/jest
@@ -106,6 +108,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: build-and-unit
+    outputs:
+      node_env: ${{ steps.runtime_flags.outputs.node_env }}
+      database_url: ${{ steps.runtime_flags.outputs.database_url }}
+      node_version: ${{ steps.runtime_flags.outputs.node_version }}
     services:
       postgres:
         image: postgres:16-alpine
@@ -123,14 +129,14 @@ jobs:
     env:
       DATABASE_URL: postgres://payments:payments@localhost:5432/payments_test
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - name: Cache Playwright browsers
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -141,9 +147,31 @@ jobs:
       - name: Build
         run: npm run build
       - name: Start server
-        run: node dist/server.js > server.log 2>&1 &
+        run: |
+          node dist/server.js > server.log 2>&1 &
+          echo $! > server.pid
       - name: Wait for server
         run: npx wait-on http://127.0.0.1:3000/webhooks/config --timeout 60000
+      - name: Verify runtime flags
+        id: runtime_flags
+        run: |
+          RUNTIME_ENV=$(tr '\0' '\n' < /proc/$(cat server.pid)/environ)
+          NODE_ENV_RT=$(sed -n 's/^NODE_ENV=//p' <<< "$RUNTIME_ENV")
+          DB_RT=$(sed -n 's/^DATABASE_URL=//p' <<< "$RUNTIME_ENV")
+          DB_SAFE=$(sed -E 's#//([^:/]+):[^@]+@#//\1:***@#' <<< "$DB_RT")
+          echo "server NODE_ENV=$NODE_ENV_RT"
+          echo "server DATABASE_URL=$DB_SAFE"
+          echo "node_env=$NODE_ENV_RT" >> "$GITHUB_OUTPUT"
+          echo "database_url=$DB_SAFE" >> "$GITHUB_OUTPUT"
+          echo "node_version=$(node -v)" >> "$GITHUB_OUTPUT"
+          if [ "$NODE_ENV_RT" != "test" ]; then
+            echo "::error::Server is running with NODE_ENV='$NODE_ENV_RT', expected 'test'"
+            exit 1
+          fi
+          if [[ "$DB_RT" != */payments_test ]]; then
+            echo "::error::Server DATABASE_URL '$DB_SAFE' is not the payments_test database"
+            exit 1
+          fi
       - name: E2E tests
         run: npm run test:e2e
         env:
@@ -153,14 +181,14 @@ jobs:
         run: cat server.log
       - name: Upload Playwright report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: playwright-report
           path: playwright-report
           if-no-files-found: ignore
       - name: Upload E2E results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: allure-playwright
           path: allure-results/playwright
@@ -173,32 +201,43 @@ jobs:
     needs: [build-and-unit, integration, e2e]
     if: always()
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - name: Download jest results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: allure-jest-*
           path: allure-results/jest
           merge-multiple: true
         continue-on-error: true
       - name: Download E2E results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: allure-playwright
           path: allure-results/playwright
           merge-multiple: true
         continue-on-error: true
-      - name: Generate Allure report
+      - name: Write Allure environment
         run: |
           mkdir -p allure-results/jest allure-results/playwright
-          npm run report:generate
+          cat > allure-results/jest/environment.properties <<EOF
+          Run.Trigger=${{ github.event_name }}
+          Run.Id=${{ github.run_id }}
+          Commit=${{ github.sha }}
+          Branch=${{ github.ref_name }}
+          Server.NODE_ENV=${{ needs.e2e.outputs.node_env || 'not captured' }}
+          Server.DATABASE_URL=${{ needs.e2e.outputs.database_url || 'not captured' }}
+          Server.Node=${{ needs.e2e.outputs.node_version || 'not captured' }}
+          EOF
+          cat allure-results/jest/environment.properties
+      - name: Generate Allure report
+        run: npm run report:generate
       - name: Upload Allure report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: allure-report
           path: allure-report
