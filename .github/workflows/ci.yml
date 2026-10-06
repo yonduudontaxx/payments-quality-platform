@@ -158,7 +158,7 @@ jobs:
           RUNTIME_ENV=$(tr '\0' '\n' < /proc/$(cat server.pid)/environ)
           NODE_ENV_RT=$(sed -n 's/^NODE_ENV=//p' <<< "$RUNTIME_ENV")
           DB_RT=$(sed -n 's/^DATABASE_URL=//p' <<< "$RUNTIME_ENV")
-          DB_SAFE=$(sed -E 's#//([^:/]+):[^@]+@#//\1:***@#' <<< "$DB_RT")
+          DB_SAFE=$(sed -E 's#^[a-z]+://([^@]*@)?##' <<< "$DB_RT")
           echo "server NODE_ENV=$NODE_ENV_RT"
           echo "server DATABASE_URL=$DB_SAFE"
           echo "node_env=$NODE_ENV_RT" >> "$GITHUB_OUTPUT"
@@ -230,7 +230,7 @@ jobs:
           Commit=${{ github.sha }}
           Branch=${{ github.ref_name }}
           Server.NODE_ENV=${{ needs.e2e.outputs.node_env || 'not captured' }}
-          Server.DATABASE_URL=${{ needs.e2e.outputs.database_url || 'not captured' }}
+          Server.Database=${{ needs.e2e.outputs.database_url || 'not captured' }}
           Server.Node=${{ needs.e2e.outputs.node_version || 'not captured' }}
           EOF
           cat allure-results/jest/environment.properties
