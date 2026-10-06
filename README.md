@@ -1,5 +1,7 @@
 # Payments Quality Platform
 
+[![CI](https://github.com/yonduudontaxx/payments-quality-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/yonduudontaxx/payments-quality-platform/actions/workflows/ci.yml)
+
 A complete payment transaction testing ecosystem built with Fastify, TypeScript, and PostgreSQL.
 
 ## Overview
@@ -77,7 +79,7 @@ The server will be available at `http://localhost:3000`.
 The project implements a full test pyramid: unit tests, integration tests, and E2E tests.
 
 ```bash
-# Run all tests and open the Allure report automatically
+# Run all tests and generate the Allure report
 npm run ci
 
 # Run individual tiers
@@ -102,7 +104,7 @@ The E2E tests use Playwright's `webServer` config to automatically start the dev
 
 ### Allure Report
 
-Allure results are written to `allure-results/jest/` (unit + integration) and `allure-results/playwright/` (E2E) after each run. `npm run ci` generates and opens the combined report automatically. To view a report from a previous run:
+Allure results are written to `allure-results/jest/` (unit + integration) and `allure-results/playwright/` (E2E) after each run. `npm run ci` generates the combined report in `allure-report/`. To open it:
 
 ```bash
 npm run report
@@ -161,18 +163,27 @@ Returns the list of queued/delivered webhook events, including delivery status a
 
 ## CI
 
-GitHub Actions runs the full test suite on every push to `main` and every pull request.
+GitHub Actions runs the full test suite:
+
+- on every push to `main` and every pull request
+- daily at 04:00 UTC
+- manually, from **Actions → CI → Run workflow** (or `gh workflow run ci.yml`)
 
 ```
-lint / type-check → migrate → unit tests → integration tests → E2E tests
+type check → build → migrate → unit tests ─┬─→ integration tests ─┬─→ Allure report
+                                           └─→ E2E tests ──────────┘
 ```
 
-The workflow spins up a `postgres:16-alpine` service container, runs migrations, then executes all three test tiers. Playwright artifacts (screenshots, traces) are uploaded on failure.
+Each test job gets its own `postgres:16-alpine` service container. Before the E2E tests run, the workflow reads the running server's process environment and fails if `NODE_ENV` is not `test` or `DATABASE_URL` does not point at `payments_test`.
+
+The `allure-report` artifact contains the combined report. Its **Environment** panel records the trigger (`push`, `pull_request`, `schedule` or `workflow_dispatch`), run id, commit, branch, and the server's runtime `NODE_ENV`, database and Node version. Playwright reports are uploaded on E2E failure.
+
+Only pull-request runs cancel an in-progress run for the same ref; scheduled, manual and `main` runs always complete.
 
 To view the latest run:
 
 ```bash
-gh run list --limit 5
+gh run list --workflow ci.yml --limit 5
 gh run view --web
 ```
 
