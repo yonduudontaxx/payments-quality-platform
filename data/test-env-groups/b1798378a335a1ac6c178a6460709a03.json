@@ -1,1 +1,0 @@
-{"id":"b1798378a335a1ac6c178a6460709a03","fullName":"payments-quality-platform:test/integration/migrator.test.ts#runMigrations applies earlier migrations and rolls back only the failing one","name":"applies earlier migrations and rolls back only the failing one","status":"passed","testResultsByEnv":{"default":"81af90673f060bc00c14940c2967ca3e"}}

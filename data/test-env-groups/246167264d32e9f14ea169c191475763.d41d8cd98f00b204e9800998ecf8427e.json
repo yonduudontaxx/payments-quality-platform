@@ -1,0 +1,1 @@
+{"id":"246167264d32e9f14ea169c191475763.d41d8cd98f00b204e9800998ecf8427e","fullName":"payments-quality-platform:test/integration/validation.test.ts#Schema validation — POST /accounts negative initial_balance_cents returns 400","name":"negative initial_balance_cents returns 400","status":"passed","testResultsByEnv":{"default":"e5b9d55d6a2545da47a1fb8879ee7c06"}}

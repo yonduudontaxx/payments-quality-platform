@@ -1,1 +1,0 @@
-{"id":"0b85c31a2efa5fefbcd972f383279e80","fullName":"payments-quality-platform:test/unit/state-machine.test.ts#validateTransition — invalid transitions authorized → authorize throws with INVALID_STATE_TRANSITION code","name":"authorized → authorize throws with INVALID_STATE_TRANSITION code","status":"passed","testResultsByEnv":{"default":"f48ed211b35debac935698e79cfb4939"}}

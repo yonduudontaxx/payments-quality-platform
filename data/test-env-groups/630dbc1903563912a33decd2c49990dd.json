@@ -1,1 +1,0 @@
-{"id":"630dbc1903563912a33decd2c49990dd","fullName":"payments-quality-platform:test/unit/state-machine.test.ts#validateTransition — invalid transitions refunded → capture throws with INVALID_STATE_TRANSITION code","name":"refunded → capture throws with INVALID_STATE_TRANSITION code","status":"passed","testResultsByEnv":{"default":"f10f066e714178dd4a5ecda1d9b5dd64"}}

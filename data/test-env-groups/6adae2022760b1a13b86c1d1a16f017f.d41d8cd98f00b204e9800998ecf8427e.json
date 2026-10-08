@@ -1,0 +1,1 @@
+{"id":"6adae2022760b1a13b86c1d1a16f017f.d41d8cd98f00b204e9800998ecf8427e","fullName":"payments-quality-platform:test/integration/validation.test.ts#Schema validation — POST /simulate/config timeout_ms below 0 returns 400","name":"timeout_ms below 0 returns 400","status":"passed","testResultsByEnv":{"default":"899276b7bbbd39a3b74354a6eb822ecc"}}

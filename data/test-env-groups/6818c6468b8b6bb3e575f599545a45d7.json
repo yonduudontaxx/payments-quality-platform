@@ -1,1 +1,0 @@
-{"id":"6818c6468b8b6bb3e575f599545a45d7","fullName":"payments-quality-platform:test/integration/validation.test.ts#Schema validation — POST /payments/authorize missing account_id returns 400","name":"missing account_id returns 400","status":"passed","testResultsByEnv":{"default":"b5102f15b423397b5ed8425f31b6d8c9"}}

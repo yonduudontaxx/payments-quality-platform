@@ -1,0 +1,1 @@
+{"id":"cfdc0ab254dfbc60e412155c38798860.d41d8cd98f00b204e9800998ecf8427e","fullName":"payments-quality-platform:test/unit/state-machine.test.ts#validateTransition — valid transitions authorized → capture does not throw","name":"authorized → capture does not throw","status":"passed","testResultsByEnv":{"default":"4cf41ef083b9566df152cafeb4b88564"}}

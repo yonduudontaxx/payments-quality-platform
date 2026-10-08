@@ -1,0 +1,1 @@
+{"id":"0093eed84a3d83c80afc33709fbcbea2.d41d8cd98f00b204e9800998ecf8427e","fullName":"payments-quality-platform:test/integration/payments.test.ts#Payment API — happy path POST /payments/:id/capture settles payment","name":"POST /payments/:id/capture settles payment","status":"passed","testResultsByEnv":{"default":"0af3f5a1a3229dfb3b5252f05b5828d4"}}

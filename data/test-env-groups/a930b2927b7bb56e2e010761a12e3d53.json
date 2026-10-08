@@ -1,1 +1,0 @@
-{"id":"a930b2927b7bb56e2e010761a12e3d53","fullName":"payments-quality-platform:test/integration/validation.test.ts#Schema validation — POST /payments/authorize non-UUID account_id returns 400","name":"non-UUID account_id returns 400","status":"passed","testResultsByEnv":{"default":"f3817ce10c052a77e24000ff0cd4266c"}}

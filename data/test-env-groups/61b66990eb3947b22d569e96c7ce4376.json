@@ -1,1 +1,0 @@
-{"id":"61b66990eb3947b22d569e96c7ce4376","fullName":"payments-quality-platform:test/integration/payments.test.ts#Payment API — error cases refund an authorized (not-yet-captured) transaction returns 422","name":"refund an authorized (not-yet-captured) transaction returns 422","status":"passed","testResultsByEnv":{"default":"4608e577e2ce452563f749b22ddd934b"}}

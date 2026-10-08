@@ -1,1 +1,0 @@
-{"id":"5d8e7c45805bcff2abdfa697c6a178ee","fullName":"payments-quality-platform:test/unit/state-machine.test.ts#validateTransition — invalid transitions authorized → refund throws with INVALID_STATE_TRANSITION code","name":"authorized → refund throws with INVALID_STATE_TRANSITION code","status":"passed","testResultsByEnv":{"default":"72a2245b3348d22cab147c0563f1981b"}}

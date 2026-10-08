@@ -1,1 +1,0 @@
-{"id":"d92adb81d23ad10c8aba4130357cbc6d","fullName":"payments-quality-platform:test/integration/validation.test.ts#Schema validation — POST /payments/authorize missing amount_cents returns 400","name":"missing amount_cents returns 400","status":"passed","testResultsByEnv":{"default":"2213acaa3734e9c46bedcc367ac0b7cc"}}

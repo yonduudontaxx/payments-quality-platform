@@ -1,1 +1,0 @@
-{"id":"228a1d16f19d4d62697506c3ca19a8dc","fullName":"payments-quality-platform:test/integration/validation.test.ts#Schema validation — POST /simulate/config decline_rate above 1 returns 400","name":"decline_rate above 1 returns 400","status":"passed","testResultsByEnv":{"default":"8710f547ffee3bdd16e42a246682fde6"}}

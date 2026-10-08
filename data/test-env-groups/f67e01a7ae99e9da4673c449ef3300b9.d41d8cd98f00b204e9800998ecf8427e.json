@@ -1,0 +1,1 @@
+{"id":"f67e01a7ae99e9da4673c449ef3300b9.d41d8cd98f00b204e9800998ecf8427e","fullName":"payments-quality-platform:test/unit/state-machine.test.ts#validateTransition — invalid transitions authorized → authorize throws PaymentError","name":"authorized → authorize throws PaymentError","status":"passed","testResultsByEnv":{"default":"9e50b36f0bec89317fec5f05e5dc8ec4"}}
