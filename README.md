@@ -4,6 +4,8 @@
 
 A complete payment transaction testing ecosystem built with Fastify, TypeScript, and PostgreSQL.
 
+**Live test report:** [https://yonduudontaxx.github.io/payments-quality-platform/](https://yonduudontaxx.github.io/payments-quality-platform/)
+
 ## Overview
 
 The Payments Quality Platform is a mock payment gateway and automated test harness designed for testing payment flows end-to-end without requiring a real payment processor. It exposes a realistic REST API for account management, payment authorization/capture/refund, webhook delivery simulation, and fault injection — giving teams a self-contained environment to validate payment logic at every layer of the test pyramid.
@@ -104,7 +106,7 @@ The E2E tests use Playwright's `webServer` config to automatically start the dev
 
 ### Allure Report
 
-Allure results are written to `allure-results/jest/` (unit + integration) and `allure-results/playwright/` (E2E) after each run. `npm run ci` generates the combined report in `allure-report/`. To open it:
+Allure results are written to `allure-results/jest/` (unit + integration) and `allure-results/playwright/` (E2E) after each run. `npm run ci` generates the combined report in `allure-report/`. CI publishes the latest report from `main` to [GitHub Pages](https://yonduudontaxx.github.io/payments-quality-platform/). To open a local report:
 
 ```bash
 npm run report
@@ -166,7 +168,7 @@ Returns the list of queued/delivered webhook events, including delivery status a
 GitHub Actions runs the full test suite:
 
 - on every push to `main` and every pull request
-- daily at 04:00 UTC
+- daily at 04:23 UTC
 - manually, from **Actions → CI → Run workflow** (or `gh workflow run ci.yml`)
 
 ```
