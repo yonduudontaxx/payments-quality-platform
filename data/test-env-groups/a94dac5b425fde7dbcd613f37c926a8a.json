@@ -1,1 +1,1 @@
-{"id":"a94dac5b425fde7dbcd613f37c926a8a","fullName":"failure-scenarios.spec.ts:9:7","name":"insufficient funds returns 402","status":"passed","testResultsByEnv":{"default":"db6a4c47527174a519dbf5a702a5c959"}}
+{"id":"a94dac5b425fde7dbcd613f37c926a8a","fullName":"failure-scenarios.spec.ts:9:7","name":"insufficient funds returns 402","status":"passed","testResultsByEnv":{"default":"79b48d3b85488fe16b505d6103067e3d"}}
