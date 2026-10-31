@@ -108,10 +108,18 @@ describe('Webhook verifier', () => {
   });
 
   test.each([
+    ['a 128-character id', 'a'.repeat(128)],
+    ['a UUID', '3f2b8c1e-9a4d-4e6b-8f0a-1c2d3e4f5a6b'],
+  ])('accepts %s as a delivery id', (_name, id) => {
+    const headers = signWebhook(BODY, id, SECRET, NOW_MS);
+    expect(verifierAt(NOW_MS)(BODY, headers)).toEqual({ valid: true, deliveryId: id });
+  });
+
+  test.each([
     ['a dot', 'delivery.1'],
     ['a space', 'delivery 1'],
     ['a newline', 'delivery\n1'],
-    ['an over-long id', 'a'.repeat(129)],
+    ['more than 128 characters', 'a'.repeat(129)],
   ])('rejects a delivery id containing %s as malformed', (_name, id) => {
     const headers = { ...signWebhook(BODY, 'delivery-1', SECRET, NOW_MS), 'X-Delivery-Id': id };
     expect(verifierAt(NOW_MS)(BODY, headers)).toEqual({ valid: false, reason: 'malformed_signature' });
