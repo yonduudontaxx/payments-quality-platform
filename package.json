@@ -49,7 +49,7 @@
     "allure-jest": "^3.14.0",
     "allure-playwright": "^3.9.0",
     "jest": "^30.5.2",
-    "jest-util": "^29.7.0",
+    "jest-util": "^30.5.1",
     "supertest": "^7.3.1",
     "ts-jest": "^29.4.15",
     "ts-node": "^10.9.2",
