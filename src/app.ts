@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import sensible from '@fastify/sensible';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import type { FastifyInstance } from 'fastify';
 import { AppError } from './shared/errors.js';
 import idempotencyPlugin from './modules/idempotency/idempotency.plugin.js';
@@ -9,6 +10,8 @@ import { paymentsRoutes } from './modules/payments/payments.routes.js';
 import { simulationRoutes } from './modules/simulation/simulation.routes.js';
 import { getSimulationConfig } from './modules/simulation/simulation.config.js';
 import { webhooksRoutes } from './modules/webhooks/webhooks.routes.js';
+
+const DEFAULT_RATE_LIMIT_MAX = 300;
 
 function parseAllowedOrigins(value: string | undefined): string[] | false {
   const origins = (value ?? '')
@@ -43,6 +46,12 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(sensible);
   await app.register(cors, {
     origin: parseAllowedOrigins(process.env.CORS_ORIGIN),
+  });
+  await app.register(rateLimit, {
+    max: Number(process.env.RATE_LIMIT_MAX ?? DEFAULT_RATE_LIMIT_MAX),
+    timeWindow: '1 minute',
+    errorResponseBuilder: (_request, context) =>
+      new AppError(`Rate limit exceeded, retry in ${context.after}`, context.statusCode, 'RATE_LIMITED'),
   });
 
   // Timeout simulation hook
