@@ -1,1 +1,0 @@
-{"id":"30dd52b2c567590447c2c7da51e2272f.d41d8cd98f00b204e9800998ecf8427e","fullName":"payments-quality-platform:test/integration/idempotency.test.ts#Idempotency cached response is returned even when request body differs","name":"cached response is returned even when request body differs","status":"passed","testResultsByEnv":{"default":"6f2762e402eded0cd22b0b6f3537c31e"}}

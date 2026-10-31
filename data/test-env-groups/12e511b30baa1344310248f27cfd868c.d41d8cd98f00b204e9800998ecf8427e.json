@@ -1,0 +1,1 @@
+{"id":"12e511b30baa1344310248f27cfd868c.d41d8cd98f00b204e9800998ecf8427e","fullName":"payments-quality-platform:test/security/sql-injection.test.ts#SQL injection in the request body owner_name \"' OR 1=1--\" is stored verbatim as data","name":"owner_name \"' OR 1=1--\" is stored verbatim as data","status":"passed","testResultsByEnv":{"default":"d750e83c5fa7d6b4200f7dd16db96425"}}

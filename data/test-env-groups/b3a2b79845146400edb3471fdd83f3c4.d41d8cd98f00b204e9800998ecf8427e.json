@@ -1,0 +1,1 @@
+{"id":"b3a2b79845146400edb3471fdd83f3c4.d41d8cd98f00b204e9800998ecf8427e","fullName":"payments-quality-platform:test/security/webhook-signing.test.ts#Webhook verifier rejects a malformed signature (md5 scheme)","name":"rejects a malformed signature (md5 scheme)","status":"passed","testResultsByEnv":{"default":"28e38a6ca5d98136b6841ac1f2065332"}}
