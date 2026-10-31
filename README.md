@@ -160,7 +160,7 @@ Returns the list of queued/delivered webhook events, including delivery status a
 
 | Header | Value |
 |--------|-------|
-| `X-Signature` | `sha256=<hex>`: HMAC-SHA256 of `${X-Timestamp}.${rawBody}` keyed with `WEBHOOK_SIGNING_SECRET` |
+| `X-Signature` | `sha256=<hex>`: HMAC-SHA256 of `${X-Timestamp}.${X-Delivery-Id}.${rawBody}` keyed with `WEBHOOK_SIGNING_SECRET` |
 | `X-Timestamp` | Unix time in seconds when the delivery was signed |
 | `X-Delivery-Id` | The webhook event id; stable across retries so receivers can deduplicate |
 
@@ -174,7 +174,7 @@ Returns the list of queued/delivered webhook events, including delivery status a
 
 | File | Tests | What it proves |
 |------|------:|----------------|
-| `webhook-signing.test.ts` | 26 | A valid signature is accepted; a tampered body, tampered timestamp or wrong secret is rejected; timestamps more than 5 minutes old or in the future are rejected; a replayed delivery id is rejected, including when re-signed; a failed verification does not burn the id; missing headers, non-`sha256` schemes, truncated or non-hex digests and non-numeric timestamps are rejected |
+| `webhook-signing.test.ts` | 26 | A valid signature is accepted; a tampered body, tampered timestamp or wrong secret is rejected; timestamps more than 5 minutes old or in the future are rejected; a replayed delivery id is rejected, a changed delivery id invalidates the signature, and a replay is rejected including when re-signed; a failed verification does not burn the id; missing headers, non-`sha256` schemes, truncated or non-hex digests and non-numeric timestamps are rejected |
 | `webhook-delivery.test.ts` | 4 | The worker's real HTTP delivery verifies against the raw body; a captured delivery replayed to the receiver is rejected; a body modified in transit fails verification; retries keep the same delivery id |
 | `idempotency-abuse.test.ts` | 6 | Reusing an `Idempotency-Key` with a different amount or metadata returns `422 IDEMPOTENCY_KEY_REUSED` and moves no money; the rejection does not leak the original response; a reordered but identical body still replays; five concurrent requests reusing one key with different bodies create exactly one transaction; a capture key reused with a body is rejected |
 | `input-tampering.test.ts` | 23 | `amount_cents` that is negative, zero, fractional, over `MAX_AMOUNT_CENTS`, beyond bigint or safe-integer range, a string, `null`, an array or an object returns `400` and leaves the balance unchanged; unknown body fields are rejected; oversized `initial_balance_cents` returns `400`; malformed JSON returns `400`, a body over 1 MiB `413`, an unsupported content type `415`; `__proto__` keys are rejected |

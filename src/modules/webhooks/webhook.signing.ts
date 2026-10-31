@@ -33,8 +33,13 @@ export function getWebhookSigningSecret(): string {
   return TEST_SIGNING_SECRET;
 }
 
-export function computeSignature(secret: string, timestamp: string, rawBody: string | Buffer): string {
-  return createHmac('sha256', secret).update(`${timestamp}.`).update(rawBody).digest('hex');
+export function computeSignature(
+  secret: string,
+  timestamp: string,
+  deliveryId: string,
+  rawBody: string | Buffer,
+): string {
+  return createHmac('sha256', secret).update(`${timestamp}.${deliveryId}.`).update(rawBody).digest('hex');
 }
 
 export function signWebhook(
@@ -45,7 +50,7 @@ export function signWebhook(
 ): Record<'X-Signature' | 'X-Timestamp' | 'X-Delivery-Id', string> {
   const timestamp = Math.floor(nowMs / 1000).toString();
   return {
-    'X-Signature': `sha256=${computeSignature(secret, timestamp, rawBody)}`,
+    'X-Signature': `sha256=${computeSignature(secret, timestamp, deliveryId, rawBody)}`,
     'X-Timestamp': timestamp,
     'X-Delivery-Id': deliveryId,
   };
@@ -79,7 +84,7 @@ export function createWebhookVerifier(options: WebhookVerifierOptions) {
     const match = SIGNATURE_PATTERN.exec(signature);
     if (!match || !TIMESTAMP_PATTERN.test(timestamp)) return { valid: false, reason: 'malformed_signature' };
 
-    const expected = Buffer.from(computeSignature(options.secret, timestamp, rawBody), 'hex');
+    const expected = Buffer.from(computeSignature(options.secret, timestamp, deliveryId, rawBody), 'hex');
     if (!timingSafeEqual(expected, Buffer.from(match[1], 'hex'))) {
       return { valid: false, reason: 'invalid_signature' };
     }

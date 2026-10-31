@@ -106,6 +106,21 @@ describe('Signed webhook delivery', () => {
     }
   });
 
+  test('a captured delivery replayed under a fresh delivery id is rejected', async () => {
+    const receiver = await startReceiver(200);
+    try {
+      await processEvent(await insertEvent(receiver.url));
+      const [delivery] = receiver.deliveries;
+      const verify = createWebhookVerifier({ secret: getWebhookSigningSecret() });
+
+      const replayed = { ...delivery.headers, 'x-delivery-id': 'attacker-chosen-id' };
+      expect(verify(delivery.rawBody, replayed)).toEqual({ valid: false, reason: 'invalid_signature' });
+      expect(verify(delivery.rawBody, delivery.headers).valid).toBe(true);
+    } finally {
+      await receiver.close();
+    }
+  });
+
   test('a delivery intercepted and modified in transit fails verification', async () => {
     const receiver = await startReceiver(200);
     try {

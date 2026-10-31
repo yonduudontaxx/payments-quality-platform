@@ -14,13 +14,13 @@ function verifierAt(nowMs: number) {
 }
 
 describe('Webhook signing', () => {
-  test('signs sha256 HMAC over "timestamp.rawBody" with all delivery headers', () => {
+  test('signs sha256 HMAC over "timestamp.deliveryId.rawBody" with all delivery headers', () => {
     const headers = signWebhook(BODY, 'delivery-1', SECRET, NOW_MS);
     const timestamp = String(NOW_MS / 1000);
 
     expect(headers['X-Timestamp']).toBe(timestamp);
     expect(headers['X-Delivery-Id']).toBe('delivery-1');
-    expect(headers['X-Signature']).toBe(`sha256=${computeSignature(SECRET, timestamp, BODY)}`);
+    expect(headers['X-Signature']).toBe(`sha256=${computeSignature(SECRET, timestamp, 'delivery-1', BODY)}`);
     expect(headers['X-Signature']).toMatch(/^sha256=[0-9a-f]{64}$/);
   });
 
