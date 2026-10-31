@@ -1,6 +1,7 @@
 import postgres from 'postgres';
 import sql, { toJson } from '../../db/client.js';
-import { AppError, NotFoundError } from '../../shared/errors.js';
+import { AppError, IdempotencyKeyReusedError, NotFoundError } from '../../shared/errors.js';
+import { fingerprint } from '../../shared/fingerprint.js';
 import { getSimulationConfig } from '../simulation/simulation.config.js';
 import type { Account, Transaction } from '../../shared/types.js';
 import { validateTransition, getResultStatus } from './state-machine.js';
@@ -20,6 +21,12 @@ function insertPaymentWebhookEvent(tx: Transaction): Promise<void> {
     amount_cents: Number(tx.amount_cents),
     status: tx.status,
   });
+}
+
+function isSameRequest(existing: Transaction, input: AuthorizePaymentInput): boolean {
+  return existing.account_id === input.account_id
+    && Number(existing.amount_cents) === input.amount_cents
+    && fingerprint(existing.metadata) === fingerprint(input.metadata ?? {});
 }
 
 export async function authorizePayment(input: AuthorizePaymentInput): Promise<Transaction> {
@@ -60,7 +67,10 @@ export async function authorizePayment(input: AuthorizePaymentInput): Promise<Tr
       const rows = await sql<Transaction[]>`
         SELECT * FROM transactions WHERE idempotency_key = ${input.idempotency_key}
       `;
-      if (rows.length > 0) return rows[0];
+      if (rows.length > 0) {
+        if (!isSameRequest(rows[0], input)) throw new IdempotencyKeyReusedError();
+        return rows[0];
+      }
     }
 
     if (err instanceof AppError && (err.code === 'INSUFFICIENT_FUNDS' || err.code === 'SIMULATED_DECLINE')) {

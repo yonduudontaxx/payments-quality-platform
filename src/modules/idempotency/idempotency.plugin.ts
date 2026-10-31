@@ -1,6 +1,8 @@
 import fp from 'fastify-plugin';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { getCachedResponse, setCachedResponse } from './idempotency.service.js';
+import { IdempotencyKeyReusedError } from '../../shared/errors.js';
+import { fingerprint } from '../../shared/fingerprint.js';
 
 function getIdempotencyKey(request: FastifyRequest): string | undefined {
   if (request.method !== 'POST') return undefined;
@@ -16,9 +18,11 @@ async function idempotencyPlugin(app: FastifyInstance): Promise<void> {
     if (!key) return;
 
     const cached = await getCachedResponse(key);
-    if (cached) {
-      return reply.status(cached.status_code).send(cached.body);
+    if (!cached) return;
+    if (cached.request_hash !== null && cached.request_hash !== fingerprint(request.body)) {
+      throw new IdempotencyKeyReusedError();
     }
+    return reply.status(cached.status_code).send(cached.body);
   });
 
   app.addHook('onSend', async (request, reply, payload) => {
@@ -39,7 +43,7 @@ async function idempotencyPlugin(app: FastifyInstance): Promise<void> {
       } catch {
         return payload; // not valid JSON — don't cache
       }
-      await setCachedResponse(key, statusCode, body);
+      await setCachedResponse(key, statusCode, body, fingerprint(request.body));
     }
 
     return payload;

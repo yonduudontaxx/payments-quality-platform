@@ -36,17 +36,12 @@ describe('Idempotency key is scoped per route', () => {
     expect((res2.body as Record<string, unknown>).owner_name).toBeUndefined();
   });
 
-  test('same key on the same route still replays the cached response', async () => {
+  test('same key and body on the same route replays the cached response', async () => {
     const headers = { 'Idempotency-Key': 'same-route-key' };
+    const body = { owner_name: 'Replay User', initial_balance_cents: 2_000 };
 
-    const res1 = await request(app, 'POST', '/accounts', {
-      body: { owner_name: 'Replay User', initial_balance_cents: 2_000 },
-      headers,
-    });
-    const res2 = await request(app, 'POST', '/accounts', {
-      body: { owner_name: 'Different Name', initial_balance_cents: 9_999 },
-      headers,
-    });
+    const res1 = await request(app, 'POST', '/accounts', { body, headers });
+    const res2 = await request(app, 'POST', '/accounts', { body, headers });
 
     expect(res1.status).toBe(201);
     expect(res2.status).toBe(201);

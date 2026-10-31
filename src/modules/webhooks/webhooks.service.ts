@@ -1,5 +1,6 @@
 import sql, { toJson } from '../../db/client.js';
 import { getWebhookDeliveryUrl } from './webhook.config.js';
+import { signWebhook } from './webhook.signing.js';
 import type { WebhookEvent } from '../../shared/types.js';
 
 export async function insertWebhookEvent(
@@ -17,10 +18,11 @@ export async function insertWebhookEvent(
 }
 
 export async function deliverWebhookEvent(event: WebhookEvent): Promise<void> {
+  const body = JSON.stringify(event.payload);
   const response = await fetch(event.delivery_url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(event.payload),
+    headers: { 'Content-Type': 'application/json', ...signWebhook(body, event.id) },
+    body,
     signal: AbortSignal.timeout(5000), // 5 second timeout
   });
 

@@ -10,6 +10,7 @@
     "migrate": "tsx src/db/migrate.ts",
     "test:unit": "jest --testPathPatterns=test/unit",
     "test:integration": "jest --runInBand --forceExit --testPathPatterns=test/integration",
+    "test:security": "jest --runInBand --forceExit --testPathPatterns=test/security",
     "test:e2e": "playwright test",
     "test": "npm run test:unit",
     "clean:results": "rm -rf allure-results/jest allure-results/playwright && mkdir -p allure-results/jest allure-results/playwright",

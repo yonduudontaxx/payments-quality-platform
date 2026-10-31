@@ -20,3 +20,9 @@ export class PaymentError extends AppError {
     super(message, 422, code);
   }
 }
+
+export class IdempotencyKeyReusedError extends AppError {
+  constructor() {
+    super('Idempotency-Key has already been used with a different request body', 422, 'IDEMPOTENCY_KEY_REUSED');
+  }
+}
