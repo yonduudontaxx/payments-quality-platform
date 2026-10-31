@@ -14,13 +14,13 @@ function verifierAt(nowMs: number) {
 }
 
 describe('Webhook signing', () => {
-  test('signs sha256 HMAC over "timestamp.rawBody" with all delivery headers', () => {
+  test('signs sha256 HMAC over "timestamp.deliveryId.rawBody" with all delivery headers', () => {
     const headers = signWebhook(BODY, 'delivery-1', SECRET, NOW_MS);
     const timestamp = String(NOW_MS / 1000);
 
     expect(headers['X-Timestamp']).toBe(timestamp);
     expect(headers['X-Delivery-Id']).toBe('delivery-1');
-    expect(headers['X-Signature']).toBe(`sha256=${computeSignature(SECRET, timestamp, BODY)}`);
+    expect(headers['X-Signature']).toBe(`sha256=${computeSignature(SECRET, timestamp, 'delivery-1', BODY)}`);
     expect(headers['X-Signature']).toMatch(/^sha256=[0-9a-f]{64}$/);
   });
 
@@ -95,6 +95,34 @@ describe('Webhook verifier', () => {
     const headers = signWebhook(BODY, 'delivery-burn', SECRET, NOW_MS);
     expect(verify('{"forged":true}', headers).valid).toBe(false);
     expect(verify(BODY, headers).valid).toBe(true);
+  });
+
+  test('rejects a signature replayed under a different delivery id', () => {
+    const headers = signWebhook(BODY, 'delivery-1', SECRET, NOW_MS);
+    const swapped = { ...headers, 'X-Delivery-Id': 'delivery-2' };
+    expect(verifierAt(NOW_MS)(BODY, swapped)).toEqual({ valid: false, reason: 'invalid_signature' });
+  });
+
+  test('pins the digest for a fixed secret, timestamp, delivery id and body', () => {
+    expect(computeSignature('known-secret', '1800000000', 'delivery-1', '{"a":1}')).toBe('e9edf20e0de15d570857fcf9b6fe57745d646a19ae4b930e0f7fc659f660dae0');
+  });
+
+  test.each([
+    ['a 128-character id', 'a'.repeat(128)],
+    ['a UUID', '3f2b8c1e-9a4d-4e6b-8f0a-1c2d3e4f5a6b'],
+  ])('accepts %s as a delivery id', (_name, id) => {
+    const headers = signWebhook(BODY, id, SECRET, NOW_MS);
+    expect(verifierAt(NOW_MS)(BODY, headers)).toEqual({ valid: true, deliveryId: id });
+  });
+
+  test.each([
+    ['a dot', 'delivery.1'],
+    ['a space', 'delivery 1'],
+    ['a newline', 'delivery\n1'],
+    ['more than 128 characters', 'a'.repeat(129)],
+  ])('rejects a delivery id containing %s as malformed', (_name, id) => {
+    const headers = { ...signWebhook(BODY, 'delivery-1', SECRET, NOW_MS), 'X-Delivery-Id': id };
+    expect(verifierAt(NOW_MS)(BODY, headers)).toEqual({ valid: false, reason: 'malformed_signature' });
   });
 
   test('distinct delivery ids with the same body are both accepted', () => {

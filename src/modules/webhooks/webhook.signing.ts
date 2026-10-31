@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 export const DEFAULT_TOLERANCE_SECONDS = 300;
 const TEST_SIGNING_SECRET = 'test-webhook-signing-secret';
 const SIGNATURE_PATTERN = /^sha256=([0-9a-f]{64})$/;
+const DELIVERY_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 const TIMESTAMP_PATTERN = /^\d{1,12}$/;
 
 export type WebhookHeaders = Record<string, string | string[] | undefined>;
@@ -33,8 +34,13 @@ export function getWebhookSigningSecret(): string {
   return TEST_SIGNING_SECRET;
 }
 
-export function computeSignature(secret: string, timestamp: string, rawBody: string | Buffer): string {
-  return createHmac('sha256', secret).update(`${timestamp}.`).update(rawBody).digest('hex');
+export function computeSignature(
+  secret: string,
+  timestamp: string,
+  deliveryId: string,
+  rawBody: string | Buffer,
+): string {
+  return createHmac('sha256', secret).update(`${timestamp}.${deliveryId}.`).update(rawBody).digest('hex');
 }
 
 export function signWebhook(
@@ -45,7 +51,7 @@ export function signWebhook(
 ): Record<'X-Signature' | 'X-Timestamp' | 'X-Delivery-Id', string> {
   const timestamp = Math.floor(nowMs / 1000).toString();
   return {
-    'X-Signature': `sha256=${computeSignature(secret, timestamp, rawBody)}`,
+    'X-Signature': `sha256=${computeSignature(secret, timestamp, deliveryId, rawBody)}`,
     'X-Timestamp': timestamp,
     'X-Delivery-Id': deliveryId,
   };
@@ -77,9 +83,11 @@ export function createWebhookVerifier(options: WebhookVerifierOptions) {
     if (!signature || !timestamp || !deliveryId) return { valid: false, reason: 'missing_headers' };
 
     const match = SIGNATURE_PATTERN.exec(signature);
-    if (!match || !TIMESTAMP_PATTERN.test(timestamp)) return { valid: false, reason: 'malformed_signature' };
+    if (!match || !TIMESTAMP_PATTERN.test(timestamp) || !DELIVERY_ID_PATTERN.test(deliveryId)) {
+      return { valid: false, reason: 'malformed_signature' };
+    }
 
-    const expected = Buffer.from(computeSignature(options.secret, timestamp, rawBody), 'hex');
+    const expected = Buffer.from(computeSignature(options.secret, timestamp, deliveryId, rawBody), 'hex');
     if (!timingSafeEqual(expected, Buffer.from(match[1], 'hex'))) {
       return { valid: false, reason: 'invalid_signature' };
     }
