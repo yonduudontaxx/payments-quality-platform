@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 export const DEFAULT_TOLERANCE_SECONDS = 300;
 const TEST_SIGNING_SECRET = 'test-webhook-signing-secret';
 const SIGNATURE_PATTERN = /^sha256=([0-9a-f]{64})$/;
+const DELIVERY_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 const TIMESTAMP_PATTERN = /^\d{1,12}$/;
 
 export type WebhookHeaders = Record<string, string | string[] | undefined>;
@@ -82,7 +83,9 @@ export function createWebhookVerifier(options: WebhookVerifierOptions) {
     if (!signature || !timestamp || !deliveryId) return { valid: false, reason: 'missing_headers' };
 
     const match = SIGNATURE_PATTERN.exec(signature);
-    if (!match || !TIMESTAMP_PATTERN.test(timestamp)) return { valid: false, reason: 'malformed_signature' };
+    if (!match || !TIMESTAMP_PATTERN.test(timestamp) || !DELIVERY_ID_PATTERN.test(deliveryId)) {
+      return { valid: false, reason: 'malformed_signature' };
+    }
 
     const expected = Buffer.from(computeSignature(options.secret, timestamp, deliveryId, rawBody), 'hex');
     if (!timingSafeEqual(expected, Buffer.from(match[1], 'hex'))) {
