@@ -42,7 +42,7 @@
   "devDependencies": {
     "@jest/globals": "^30.5.2",
     "@playwright/test": "^1.60.0",
-    "@types/node": "^25.9.1",
+    "@types/node": "^26.6.5",
     "@types/supertest": "^7.2.0",
     "allure": "^3.9.0",
     "allure-jest": "^3.9.0",
