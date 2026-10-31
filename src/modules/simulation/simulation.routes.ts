@@ -13,10 +13,9 @@ export async function simulationRoutes(app: FastifyInstance): Promise<void> {
         additionalProperties: false,
       },
     },
-  }, async (request, reply) => {
+  }, async (request) => {
     const body = request.body as { timeout_ms?: number; decline_rate?: number };
-    const updated = setSimulationConfig(body);
-    return reply.send(updated); // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write
+    return setSimulationConfig(body);
   });
 
   app.get('/simulate/config', async (_request, reply) => {

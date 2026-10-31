@@ -29,6 +29,4 @@ Dependabot ([`.github/dependabot.yml`](.github/dependabot.yml)) proposes weekly 
 
 ## Suppressed findings
 
-| Finding | Location | Reason |
-|---------|----------|--------|
-| Semgrep `javascript.express.security.audit.xss.direct-response-write` | `src/modules/simulation/simulation.routes.ts` | Express XSS rule matched on a Fastify route. `reply.send` serialises the schema-validated object as `application/json`, so no HTML is written. |
+None.
