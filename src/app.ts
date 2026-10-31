@@ -10,17 +10,39 @@ import { simulationRoutes } from './modules/simulation/simulation.routes.js';
 import { getSimulationConfig } from './modules/simulation/simulation.config.js';
 import { webhooksRoutes } from './modules/webhooks/webhooks.routes.js';
 
+function parseAllowedOrigins(value: string | undefined): string[] | false {
+  const origins = (value ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter((origin) => origin !== '' && origin !== '*');
+  return origins.length > 0 ? origins : false;
+}
+
+function isFastifyClientError(error: { statusCode?: number; code?: string }): error is { statusCode: number; code: string } {
+  return typeof error.code === 'string'
+    && error.code.startsWith('FST_')
+    && typeof error.statusCode === 'number'
+    && error.statusCode >= 400
+    && error.statusCode < 500;
+}
+
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
     logger: process.env.LOG_LEVEL
       ? { level: process.env.LOG_LEVEL }
       : process.env.NODE_ENV !== 'test',
+    ajv: {
+      customOptions: {
+        coerceTypes: true,
+        removeAdditional: false,
+      },
+    },
   });
 
   // Core plugins
   await app.register(sensible);
   await app.register(cors, {
-    origin: process.env.CORS_ORIGIN ?? false,
+    origin: parseAllowedOrigins(process.env.CORS_ORIGIN),
   });
 
   // Timeout simulation hook
@@ -38,7 +60,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(idempotencyPlugin);
 
   // Global error handler
-  app.setErrorHandler((error: Error & { validation?: unknown; statusCode?: number }, _request, reply) => {
+  app.setErrorHandler((error: Error & { validation?: unknown; statusCode?: number; code?: string }, _request, reply) => {
     if (error instanceof AppError) {
       return reply.status(error.statusCode).send({
         error: error.code,
@@ -53,6 +75,14 @@ export async function buildApp(): Promise<FastifyInstance> {
         error: 'VALIDATION_ERROR',
         message: error.message,
         statusCode: 400,
+      });
+    }
+
+    if (isFastifyClientError(error)) {
+      return reply.status(error.statusCode).send({
+        error: error.code,
+        message: error.message,
+        statusCode: error.statusCode,
       });
     }
 

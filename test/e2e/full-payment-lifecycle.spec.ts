@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import * as http from 'http';
 import * as net from 'net';
+import { createWebhookVerifier, getWebhookSigningSecret } from '../../src/modules/webhooks/webhook.signing';
 
 // Helper: get a free port
 async function getFreePort(): Promise<number> {
@@ -16,10 +17,18 @@ async function getFreePort(): Promise<number> {
 // Helper: create webhook listener
 function createWebhookListener(port: number) {
   const events: Record<string, unknown>[] = [];
+  const rejected: string[] = [];
+  const verify = createWebhookVerifier({ secret: getWebhookSigningSecret() });
   const server = http.createServer((req, res) => {
     let body = '';
     req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
     req.on('end', () => {
+      const result = verify(body, req.headers);
+      if (!result.valid) {
+        rejected.push(result.reason);
+        res.writeHead(401); res.end();
+        return;
+      }
       try { events.push(JSON.parse(body)); } catch {}
       res.writeHead(200); res.end();
     });
@@ -28,6 +37,7 @@ function createWebhookListener(port: number) {
   return {
     url: `http://localhost:${port}`,
     getEvents: () => [...events],
+    getRejected: () => [...rejected],
     close: () => new Promise<void>(resolve => server.close(() => resolve())),
   };
 }
@@ -99,6 +109,7 @@ test.describe('Full Payment Lifecycle', () => {
     // webhookEvents are the raw payloads delivered to the listener (event.payload in DB terms)
     const webhookEvents = webhookListener.getEvents() as Array<Record<string, unknown>>;
     expect(webhookEvents.length).toBeGreaterThanOrEqual(2);
+    expect(webhookListener.getRejected()).toEqual([]);
 
     // Verify status values — payload.status reflects the transaction state at each event
     const statuses = webhookEvents.map(e => e.status as string);

@@ -49,7 +49,7 @@ describe('Idempotency', () => {
     expect(body2.amount_cents).toBe(body1.amount_cents);
   });
 
-  test('cached response is returned even when request body differs', async () => {
+  test('reusing a key with a different request body is rejected with 422', async () => {
     const key = 'test-key-reuse';
 
     const res1 = await request(app, 'POST', '/payments/authorize', {
@@ -57,18 +57,14 @@ describe('Idempotency', () => {
       headers: { 'Idempotency-Key': key },
     });
 
-    // Different amount — should still return the cached first response
     const res2 = await request(app, 'POST', '/payments/authorize', {
       body: { account_id: accountId, amount_cents: 9_999 },
       headers: { 'Idempotency-Key': key },
     });
 
     expect(res1.status).toBe(201);
-    expect(res2.status).toBe(201);
-    const body1 = res1.body as Record<string, unknown>;
-    const body2 = res2.body as Record<string, unknown>;
-    expect(body2.id).toBe(body1.id);
-    expect(body2.amount_cents).toBe(1_000); // cached value, not 9_999
+    expect(res2.status).toBe(422);
+    expect((res2.body as Record<string, unknown>).error).toBe('IDEMPOTENCY_KEY_REUSED');
   });
 
   test('different keys create different transactions', async () => {

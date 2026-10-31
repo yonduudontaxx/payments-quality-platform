@@ -6,6 +6,7 @@ import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../../src/app.js';
 import sql, { toJson } from '../../src/db/client.js';
 import { processEvent, processPendingWebhooks, WORKER_LOCK_KEY } from '../../src/modules/webhooks/webhooks.worker.js';
+import { createWebhookVerifier, getWebhookSigningSecret } from '../../src/modules/webhooks/webhook.signing.js';
 import type { WebhookEvent } from '../../src/shared/types.js';
 import { request } from './helpers.js';
 
@@ -26,10 +27,12 @@ async function getFreePort(): Promise<number> {
 
 function createMockServer(responseStatus: number) {
   const receivedBodies: unknown[] = [];
+  const receivedRequests: Array<{ rawBody: string; headers: http.IncomingHttpHeaders }> = [];
   const server = http.createServer((req, res) => {
     let body = '';
     req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
     req.on('end', () => {
+      receivedRequests.push({ rawBody: body, headers: req.headers });
       try { receivedBodies.push(JSON.parse(body)); } catch {}
       res.writeHead(responseStatus);
       res.end();
@@ -38,6 +41,7 @@ function createMockServer(responseStatus: number) {
   const port = { value: 0 };
   return {
     receivedBodies,
+    receivedRequests,
     start: async () => {
       port.value = await getFreePort();
       await new Promise<void>(resolve => server.listen(port.value, resolve));
@@ -106,6 +110,10 @@ describe('Webhook worker — processEvent', () => {
       const [updated] = await sql<WebhookEvent[]>`SELECT * FROM webhook_events WHERE id = ${event.id}`;
       expect(updated.status).toBe('delivered');
       expect(updated.attempts).toBe(1);
+
+      const [delivery] = server.receivedRequests;
+      const verify = createWebhookVerifier({ secret: getWebhookSigningSecret() });
+      expect(verify(delivery.rawBody, delivery.headers)).toEqual({ valid: true, deliveryId: event.id });
     } finally {
       await server.close();
     }

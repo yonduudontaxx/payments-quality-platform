@@ -1,10 +1,12 @@
+export const MAX_AMOUNT_CENTS = 100_000_000;
+
 export const authorizePaymentSchema = {
   body: {
     type: 'object',
     required: ['account_id', 'amount_cents'],
     properties: {
       account_id: { type: 'string', format: 'uuid' },
-      amount_cents: { type: 'integer', minimum: 1 },
+      amount_cents: { type: 'integer', minimum: 1, maximum: MAX_AMOUNT_CENTS },
       metadata: { type: 'object', additionalProperties: true },
     },
     additionalProperties: false,
