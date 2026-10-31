@@ -168,15 +168,15 @@ Returns the list of queued/delivered webhook events, including delivery status a
 GitHub Actions runs the full test suite:
 
 - on every push to `main` and every pull request
-- daily at 04:23 UTC
+- daily, scheduled for 04:23 UTC. GitHub queues scheduled runs and does not guarantee the start time; since October 2026 they have started 4–8 hours late
 - manually, from **Actions → CI → Run workflow** (or `gh workflow run ci.yml`)
 
 ```
-type check → build → migrate → unit tests ─┬─→ integration tests ─┬─→ Allure report
-                                           └─→ E2E tests ──────────┘
+type check → build → unit tests ─┬─→ integration tests ─┬─→ Allure report
+                                 └─→ E2E tests ──────────┘
 ```
 
-Each test job gets its own `postgres:16-alpine` service container. Before the E2E tests run, the workflow reads the running server's process environment and fails if `NODE_ENV` is not `test` or `DATABASE_URL` does not point at `payments_test`.
+The unit-test job has no database, so a unit test that touches PostgreSQL fails in CI. The integration and E2E jobs each get their own `postgres:16-alpine` service container and run migrations first. Before the E2E tests run, the workflow reads the running server's process environment and fails if `NODE_ENV` is not `test` or `DATABASE_URL` does not point at `payments_test`.
 
 The latest combined report from `main` is published at **https://yonduudontaxx.github.io/payments-quality-platform/**. It is updated by push, scheduled and manual runs on `main` when the unit-test step passed or failed (rather than being skipped or cancelled) and the report contains at least one test, so a type-check, build or test-startup failure keeps the previous report. If the unit tests fail, the integration and E2E jobs are skipped and the published report holds the unit results only. Whenever report generation succeeds, the combined report is also uploaded as the `allure-report` artifact (90-day retention), including on pull requests. The report's **Environment** panel records the trigger (`push`, `pull_request`, `schedule` or `workflow_dispatch`), run id, commit, branch, and the server's runtime `NODE_ENV`, database and Node version. Playwright reports are uploaded on E2E failure. `LOG_LEVEL` sets the level of both the Fastify request log and the webhook worker log (default `info`). Without it, the request log is off under `NODE_ENV=test`; the E2E server runs with `LOG_LEVEL=info`, so **Server logs on failure** includes the request log.
 

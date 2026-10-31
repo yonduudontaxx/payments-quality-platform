@@ -26,22 +26,6 @@ jobs:
     timeout-minutes: 10
     outputs:
       tests_ran: ${{ steps.unit.outcome == 'success' || steps.unit.outcome == 'failure' }}
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: payments
-          POSTGRES_PASSWORD: payments
-          POSTGRES_DB: payments_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    env:
-      DATABASE_URL: postgres://payments:payments@localhost:5432/payments_test
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -53,8 +37,6 @@ jobs:
         run: npx tsc --noEmit
       - name: Build
         run: npm run build
-      - name: Run migrations
-        run: npm run migrate
       - name: Unit tests
         id: unit
         run: npm run test:unit
