@@ -1,0 +1,1 @@
+{"id":"1a6291dc28f59edec501fa135bd388cd.d41d8cd98f00b204e9800998ecf8427e","fullName":"payments-quality-platform:test/security/rate-limiting.test.ts#Rate limiting responses under the limit advertise the remaining quota","name":"responses under the limit advertise the remaining quota","status":"passed","testResultsByEnv":{"default":"48eb74ecc44c3dc01844b3c0c68c359a"}}
